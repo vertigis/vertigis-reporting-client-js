@@ -3,12 +3,12 @@ name: CI/CD
 on:
     push:
         branches:
-            - master
+            - main
             - alpha
             - beta
     pull_request:
         branches:
-            - master
+            - main
             - alpha
             - beta
 

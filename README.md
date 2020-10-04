@@ -1,6 +1,6 @@
 # Geocortex Reporting Client for JavaScript
 
-![CI](https://github.com/geocortex/geocortex-reporting-client-js/workflows/CI/badge.svg) ![NPM](https://img.shields.io/npm/v/geocortex-reporting-client)
+![CI/CD](https://github.com/geocortex/geocortex-reporting-client-js/workflows/CI/CD/badge.svg) ![NPM](https://img.shields.io/npm/v/geocortex-reporting-client)
 
 This library makes it easy to run [Geocortex Reporting](https://www.geocortex.com/products/geocortex-reporting/) or [Geocortex Printing](https://www.geocortex.com/products/geocortex-printing/) jobs.
 

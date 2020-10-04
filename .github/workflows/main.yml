@@ -1,0 +1,45 @@
+name: CI/CD
+
+on:
+    push:
+        branches:
+            - master
+            - alpha
+            - beta
+    pull_request:
+        branches:
+            - master
+            - alpha
+            - beta
+
+env:
+    CI: true
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+
+            - name: Use Node.js 12
+              uses: actions/setup-node@v1
+              with:
+                  node-version: 12.x
+
+            - run: npm install
+
+            - run: npm run build
+
+    test:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+
+            - name: Use Node.js 12
+              uses: actions/setup-node@v1
+              with:
+                  node-version: 12.x
+
+            - run: npm install
+
+            - run: npm run test

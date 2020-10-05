@@ -95,33 +95,41 @@ describe("run", () => {
         mockResponseOnce(MOCK_REPORTING_JOB_ARTIFACTS_RESPONSE_PENDING);
         mockResponseOnce(MOCK_REPORTING_JOB_ARTIFACTS_RESPONSE_DONE);
 
-        expect(await run(
-            MOCK_PORTAL_ITEM_ID,
-            DEFAULT_PORTAL_URL,
-            {
+        expect(await run({
+            itemId: MOCK_PORTAL_ITEM_ID,
+            portalUrl: DEFAULT_PORTAL_URL,
+            parameters: {
                 parameter1: "asdf",
                 parameter2: [1, 2, 3]
             },
-            MOCK_PORTAL_TOKEN,
-            undefined,
-            undefined,
-            true
+            token: MOCK_PORTAL_TOKEN,
+            usePolling: true
+        }
         )).toBe(`${DEFAULT_REPORTING_URL}/service/job/result?ticket=${MOCK_REPORT_TICKET}&tag=${MOCK_REPORT_TAG}`);
+    });
+    test("options are required", async () => {
+        const options = <{ itemId: string }><unknown>undefined;
+        expect(async () => await run(options)).rejects.toThrow("options are required.");
+    });
+    test("itemId option is required", async () => {
+        const options = {
+            itemId: <string><unknown>undefined
+        };
+        expect(async () => await run(options)).rejects.toThrow("itemId is required.");
     });
 });
 
 // test("live", async () => {
 //     global.fetch = nodeFetch;
-//     const href = await run(
-//         "https://www.arcgis.com/home/item.html?id=25c278bd96aa49949f8a89564c6347ce",
-//         {
+//     const href = await run({
+//         itemId: "25c278bd96aa49949f8a89564c6347ce",
+//         parameters: {
 //             parameter1: "asdf",
 //             parameter2: [1, 2, 3]
 //         },
-//         "<your token>",
-//         undefined,
-//         true
-//     );
+//         token: "<your token>",
+//         usePolling: true
+//     });
 //     console.log(href)
 //     expect(href).toMatch("https://apps.geocortex.com/reporting/service/job/result?ticket");
 // }, 100000);

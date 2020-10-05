@@ -15,15 +15,15 @@ interface PortalItemResponse {
 
 interface JobStatusResponse {
     results?: {
-        $type: "JobResult" | "JobQuit"
-        code?: number,
-        message?: string,
-        tag?: string,
-    }[],
+        $type: "JobResult" | "JobQuit";
+        code?: number;
+        message?: string;
+        tag?: string;
+    }[];
     error?: {
-        message: string,
-        status: number,
-    },
+        message: string;
+        status: number;
+    };
 }
 
 /**
@@ -34,7 +34,7 @@ interface JobStatusResponse {
 export function parseItemUrl(url: string): { itemId: string, portalUrl: string } {
     const portalItemRegex = /^(https?:\/\/.*?)\/home\/item.html.*?id=([a-f0-9]+)/i;
     const urlParts = url.match(portalItemRegex);
-    
+
     if (urlParts && urlParts.length > 2) {
         return {
             itemId: urlParts[2],
@@ -46,32 +46,69 @@ export function parseItemUrl(url: string): { itemId: string, portalUrl: string }
 }
 
 /**
- * Runs a report.
- * @param itemId The portal item ID of the Reporting or Printing item.
- * @param portalUrl The URL of the ArcGIS Portal instance to use. Defaults to ArcGIS Online: "https://www.arcgis.com".
- * @param parameters The parameters to submit to the report.
- * @param token An optional token for accessing a secured reports.
- * @param culture The culture to use for localization. For example "en-US".
- * @param dpi The DPI to use when rendering a map print.
- * @param usePolling Whether to check the status of the job using polling.
+ * Options for running a report.
+ */
+interface RunOptions {
+    /**
+     * The culture to use for localization. For example "en-US". 
+     * This option is supported from Geocortex Reporting 5.9 and Geocortex Printing 5.6.
+     */
+    culture?: string;
+    /**
+     * The DPI to use when rendering a map print.
+     */
+    dpi?: number;
+    /**
+     * The portal item ID of the report item.
+     */
+    itemId: string;
+    /**
+     * An object specifying the parameters to submit to the report.
+     * The keys of the object must match the parameter names that exist in the report.
+     */
+    parameters?: Record<string, SingleParameterValue | MultiParameterValue>;
+    /**
+     * The URL of the ArcGIS Portal instance to use. Defaults to ArcGIS Online: "https://www.arcgis.com".
+     */
+    portalUrl?: string;
+    /**
+     * An optional ArcGIS token for accessing a secured report.
+     * If the report is secured, or accesses secured ArcGIS content the token is required.
+     */
+    token?: string;
+    /**
+     * Whether to check the status of the job using polling. 
+     * If true, the service will be polled periodically for results.
+     * If false, connect to the service using WebSockets to listen for results.
+     * It is recommended to use WebSockets where possible.
+     * The default is false. 
+     */
+    usePolling?: boolean;
+}
+
+/**
+ * Runs a Geocortex report or print.
+ * @param options The options that define the report to run and how to run it.
  * @returns A URL to the report output file.
  */
-export async function run(
-    itemId: string,
-    portalUrl = "https://www.arcgis.com",
-    parameters: Record<string, SingleParameterValue | MultiParameterValue> = {},
-    token?: string,
-    culture?: string,
-    dpi?: number,
-    usePolling = false,
-): Promise<string> {
-    const portalItemInfo = await getPortalItemInfo(itemId, portalUrl, token);
+export async function run(options: RunOptions): Promise<string> {
+    if (!options) {
+        throw new Error("options are required.");
+    }
+    if (!options.itemId) {
+        throw new Error("itemId is required.");
+    }
+
+    // Ensure portal doesn't end with a trailing slash
+    const portalUrl = options.portalUrl?.replace(/\/$/, "") || "https://www.arcgis.com";
+
+    const portalItemInfo = await getPortalItemInfo(options.itemId, portalUrl, options.token);
     validatePortalItemInfo(portalItemInfo);
 
     const apiServiceUrl = `${portalItemInfo.url}service`;
-    const bearerToken = await getBearerToken(apiServiceUrl, portalUrl, token);
-    const ticket = await startJob(portalUrl, itemId, apiServiceUrl, bearerToken, parameters, culture, dpi);
-    const tag = await watchJob(itemId, apiServiceUrl, ticket, usePolling);
+    const bearerToken = await getBearerToken(apiServiceUrl, portalUrl, options.token);
+    const ticket = await startJob(portalUrl, options.itemId, apiServiceUrl, bearerToken, options.parameters, options.culture, options.dpi);
+    const tag = await watchJob(options.itemId, apiServiceUrl, ticket, options.usePolling);
     const downloadUrl = `${apiServiceUrl}/job/result?ticket=${ticket}&tag=${tag}`;
 
     return downloadUrl;
@@ -163,26 +200,29 @@ async function startJob(
     itemId: string,
     apiServiceUrl: string,
     bearerToken: string,
-    parameters: Record<string, SingleParameterValue | MultiParameterValue>,
+    parameters?: Record<string, SingleParameterValue | MultiParameterValue>,
     culture?: string,
     dpi?: number
 ): Promise<string> {
     const params: Parameter[] = [];
-    for (const name in parameters) {
-        const value = parameters[name];
-        if (Array.isArray(value)) {
-            params.push({
-                containsMultipleValues: true,
-                name,
-                values: value,
-            });
-        } else {
-            params.push({
-                name,
-                value,
-            });
+    if (parameters) {
+        for (const name in parameters) {
+            const value = parameters[name];
+            if (Array.isArray(value)) {
+                params.push({
+                    containsMultipleValues: true,
+                    name,
+                    values: value,
+                });
+            } else {
+                params.push({
+                    name,
+                    value,
+                });
+            }
         }
     }
+
     const body = {
         template: {
             itemId: itemId,

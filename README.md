@@ -19,27 +19,62 @@ npm install @vertigis/geocortex-reporting-client
 
 ## Generating a report
 
-The client exports a `run` async function that will return a url to the report upon completion.
+The client exports a `run` async function that will return a URL to the report upon completion.
 
 ```
-import { run } from "@vertigis/geocortex-reporting-client"
+import { run } from "@vertigis/geocortex-reporting-client";
 
-url = await run("itemid", [... other arguments])
+var url = await run({ itemId: "itemid" });
 ```
 
-### Arguments
+### Options
 
-`itemId` is required. All other arguments are optional.
+`itemId` is required. All other options are optional.
 
-| Argument       | Type | Description                                                                                                                                                                                                                    |
-| -------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| itemId        | string  | The portal item ID of the Reporting or Printing item.                                                                                                                                                                          |
-| portalUrl     | string  | The URL of the ArcGIS Portal instance to use. Defaults to ArcGIS Online: `"https://www.arcgis.com"`                                                                                                                            |
-| parameters | any  | Other parameters to pass to the job. These are commonly used to parameterize your template. For example `run("itemid", "portalurl", { Title: "My Title", FeatureIds: [1, 2, 3] })`                                                                                  |
-| token          | string  | The Portal access token to be used to access secured resources. If not provided requests to secured resources will fail.                                                                                                       |
-| culture        | string  | The culture to use for localization. For example `"en-US"`.                                                                                                                                                                    |
-| dpi            | number  | The DPI to use when rendering a map print. Defaults to `96`.                                                                                                                                                                   |
-| usePolling    | boolean | When `true`, the job service will be polled periodically for results. When `false`, connect to the job service using WebSockets to listen for results. It's recommended to use WebSockets where possible. Defaults to `false`. |
+| Option        | Type    | Description                                                                                                                                                                       |
+| ------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| culture       | string  | The culture to use for localization. For example `"en-US"`.                                                                                                                       |
+| dpi           | number  | The DPI to use when rendering a map print. Defaults to `96`.                                                                                                                      |
+| itemId        | string  | The portal item ID of the report item.                                                                                                                                            |
+| parameters    | object  | An object specifying additional parameters to pass to the job.                                                                                                                    |
+| portalUrl     | string  | The URL of the ArcGIS Portal instance to use. Defaults to ArcGIS Online: `"https://www.arcgis.com"`.                                                                              |
+| token         | string  | The Portal access token to be used to access secured resources. If not provided requests to secured resources will fail.                                                          |
+| usePolling    | boolean | When `true`, check for results by polling the service. When `false`, check for results using WebSockets. It is recommended to use WebSockets where possible. Defaults to `false`. |
+
+## Examples
+
+### Run a report from ArcGIS Online
+```
+url = await run({ itemId: "itemid" });
+```
+
+### Run a report from ArcGIS Enterprise
+```
+url = await run({ 
+    itemId: "itemid", 
+    portalUrl: "https://server.domain.com/portal"
+});
+ ```
+
+### Run a report with parameters
+```
+url = await run({ 
+    itemId: "itemid",
+    parameters: { 
+        Title: "My Title", 
+        FeatureIds: [1, 2, 3] 
+    }
+});
+```
+Note: the parameter names must mach the names of parameters that exist in the report.
+
+### Run a secured report, or a report that accesses secured ArcGIS content
+```
+url = await run({ 
+    itemId: "itemid", 
+    token: "eyJhbGciOiJIUzI1Ni..."
+});
+```
 
 ## Documentation
 

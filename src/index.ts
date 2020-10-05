@@ -59,7 +59,7 @@ interface RunOptions {
      */
     dpi?: number;
     /**
-     * The portal item ID of the Reporting or Printing item.
+     * The portal item ID of the report item.
      */
     itemId: string;
     /**
@@ -72,7 +72,7 @@ interface RunOptions {
      */
     portalUrl?: string;
     /**
-     * An optional ArcGIS token for accessing a secured reports.
+     * An optional ArcGIS token for accessing a secured report.
      * If the report is secured, or accesses secured ArcGIS content the token is required.
      */
     token?: string;

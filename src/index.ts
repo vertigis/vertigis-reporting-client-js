@@ -79,7 +79,7 @@ interface RunOptions {
     /**
      * Whether to check the status of the job using polling. 
      * If true, the service will be polled periodically for results.
-     * If false, connect to the job service using WebSockets to listen for results.
+     * If false, connect to the service using WebSockets to listen for results.
      * It is recommended to use WebSockets where possible.
      * The default is false. 
      */

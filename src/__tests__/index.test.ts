@@ -7,55 +7,73 @@ beforeEach(() => {
 
 describe("parseItemUrl", () => {
     test("valid URLs", () => {
-        expect(parseItemUrl("https://www.arcgis.com/home/item.html?id=25c278bd96aa49949f8a89564c6347ce")).toEqual({
+        expect(
+            parseItemUrl(
+                "https://www.arcgis.com/home/item.html?id=25c278bd96aa49949f8a89564c6347ce"
+            )
+        ).toEqual({
             itemId: "25c278bd96aa49949f8a89564c6347ce",
             portalUrl: "https://www.arcgis.com",
         });
-        expect(parseItemUrl("https://server/portal/home/item.html?id=25c278bd96aa49949f8a89564c6347ce")).toEqual({
+        expect(
+            parseItemUrl(
+                "https://server/portal/home/item.html?id=25c278bd96aa49949f8a89564c6347ce"
+            )
+        ).toEqual({
             itemId: "25c278bd96aa49949f8a89564c6347ce",
             portalUrl: "https://server/portal",
         });
     });
     test("invalid URLs", () => {
         expect(() => parseItemUrl("")).toThrow();
-        expect(() => parseItemUrl("https://www.arcgis.com/home/item.html?id=")).toThrow();
-        expect(() => parseItemUrl("www.arcgis.com/home/item.html?id=25c278bd96aa49949f8a89564c6347ce")).toThrow();
-        expect(() => parseItemUrl("https://www.arcgis.com/item.html?id=25c278bd96aa49949f8a89564c6347ce")).toThrow();
+        expect(() =>
+            parseItemUrl("https://www.arcgis.com/home/item.html?id=")
+        ).toThrow();
+        expect(() =>
+            parseItemUrl(
+                "www.arcgis.com/home/item.html?id=25c278bd96aa49949f8a89564c6347ce"
+            )
+        ).toThrow();
+        expect(() =>
+            parseItemUrl(
+                "https://www.arcgis.com/item.html?id=25c278bd96aa49949f8a89564c6347ce"
+            )
+        ).toThrow();
     });
 });
 
 describe("run", () => {
     test("basic", async () => {
-        const MOCK_PORTAL_ITEM_ID = "mock-portal-item-id"
-        const MOCK_PORTAL_TOKEN = "mock-portal-token"
+        const MOCK_PORTAL_ITEM_ID = "mock-portal-item-id";
+        const MOCK_PORTAL_TOKEN = "mock-portal-token";
 
-        const MOCK_REPORTING_TOKEN = "mock-reporting-token"
-        const MOCK_REPORT_TICKET = "mock-report-ticket"
-        const MOCK_REPORT_TAG = "mock-report-tag"
+        const MOCK_REPORTING_TOKEN = "mock-reporting-token";
+        const MOCK_REPORT_TICKET = "mock-report-ticket";
+        const MOCK_REPORT_TAG = "mock-report-tag";
 
-        const DEFAULT_REPORTING_URL = "https://apps.geocortex.com/reporting"
-        const DEFAULT_PORTAL_URL = "https://www.arcgis.com"
+        const DEFAULT_REPORTING_URL = "https://apps.geocortex.com/reporting";
+        const DEFAULT_PORTAL_URL = "https://www.arcgis.com";
 
         // https://www.arcgis.com/sharing/content/items/25c278bd96aa49949f8a89564c6347ce?f=json&token=
         const MOCK_PORTAL_ITEM_RESPONSE = {
             access: "public",
             typeKeywords: ["Geocortex Reporting"],
-            url: `${DEFAULT_REPORTING_URL}/`
+            url: `${DEFAULT_REPORTING_URL}/`,
         };
 
         // https://apps.geocortex.com/reporting/service/auth/token/run
         const MOCK_REPORTING_TOKEN_RESPONSE = {
             response: {
-                token: MOCK_REPORTING_TOKEN
-            }
+                token: MOCK_REPORTING_TOKEN,
+            },
         };
 
         // https://apps.geocortex.com/reporting/service/job/run
         const MOCK_REPORTING_JOB_RUN_RESPONSE = {
             response: {
                 $type: "TokenResponse",
-                ticket: MOCK_REPORT_TICKET
-            }
+                ticket: MOCK_REPORT_TICKET,
+            },
         };
 
         // https://apps.geocortex.com/reporting/service/job/artifacts?ticket=
@@ -63,12 +81,14 @@ describe("run", () => {
             results: [],
         };
         const MOCK_REPORTING_JOB_ARTIFACTS_RESPONSE_DONE = {
-            results: [{
-                $type: "JobResult",
-                contentType: "application/pdf",
-                length: 24003,
-                tag: MOCK_REPORT_TAG,
-            }],
+            results: [
+                {
+                    $type: "JobResult",
+                    contentType: "application/pdf",
+                    length: 24003,
+                    tag: MOCK_REPORT_TAG,
+                },
+            ],
         };
 
         const mockFetch = jest.fn();
@@ -76,7 +96,8 @@ describe("run", () => {
 
         function mockResponseOnce(
             response: Record<string, unknown>,
-            callback?: (input: RequestInfo, init: RequestInit) => void) {
+            callback?: (input: RequestInfo, init: RequestInit) => void
+        ) {
             mockFetch.mockImplementationOnce((input, init) => {
                 callback?.(input, init);
                 return Promise.resolve({
@@ -90,32 +111,30 @@ describe("run", () => {
 
         mockResponseOnce(MOCK_PORTAL_ITEM_RESPONSE);
         mockResponseOnce(MOCK_REPORTING_TOKEN_RESPONSE);
-        mockResponseOnce(MOCK_REPORTING_JOB_RUN_RESPONSE,
-            (input, init) => expect(init.headers?.["Authorization"]).toBe(`Bearer ${MOCK_REPORTING_TOKEN}`));
+        mockResponseOnce(MOCK_REPORTING_JOB_RUN_RESPONSE, (input, init) =>
+            expect(init.headers?.["Authorization"]).toBe(
+                `Bearer ${MOCK_REPORTING_TOKEN}`
+            )
+        );
         mockResponseOnce(MOCK_REPORTING_JOB_ARTIFACTS_RESPONSE_PENDING);
         mockResponseOnce(MOCK_REPORTING_JOB_ARTIFACTS_RESPONSE_DONE);
 
-        expect(await run({
-            itemId: MOCK_PORTAL_ITEM_ID,
-            portalUrl: DEFAULT_PORTAL_URL,
-            parameters: {
-                parameter1: "asdf",
-                parameter2: [1, 2, 3]
-            },
-            token: MOCK_PORTAL_TOKEN,
-            usePolling: true
-        }
-        )).toBe(`${DEFAULT_REPORTING_URL}/service/job/result?ticket=${MOCK_REPORT_TICKET}&tag=${MOCK_REPORT_TAG}`);
-    });
-    test("options are required", async () => {
-        const options = <{ itemId: string }><unknown>undefined;
-        expect(async () => await run(options)).rejects.toThrow("options are required.");
+        expect(
+            await run(MOCK_PORTAL_ITEM_ID, {
+                portalUrl: DEFAULT_PORTAL_URL,
+                parameters: {
+                    parameter1: "asdf",
+                    parameter2: [1, 2, 3],
+                },
+                token: MOCK_PORTAL_TOKEN,
+                usePolling: true,
+            })
+        ).toBe(
+            `${DEFAULT_REPORTING_URL}/service/job/result?ticket=${MOCK_REPORT_TICKET}&tag=${MOCK_REPORT_TAG}`
+        );
     });
     test("itemId option is required", async () => {
-        const options = {
-            itemId: <string><unknown>undefined
-        };
-        expect(async () => await run(options)).rejects.toThrow("itemId is required.");
+        await expect(run(undefined!)).rejects.toThrow("itemId is required.");
     });
 });
 

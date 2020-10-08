@@ -1,21 +1,41 @@
 module.exports = {
-    "env": {
-        "browser": true,
-        "es2021": true
+    env: {
+        browser: true,
+        jest: true,
+        node: true,
     },
-    "extends": [
+    extends: [
         "eslint:recommended",
-        "plugin:@typescript-eslint/recommended"
+        "plugin:@typescript-eslint/eslint-recommended",
+        "plugin:@typescript-eslint/recommended",
+        "plugin:@typescript-eslint/recommended-requiring-type-checking",
+        "prettier",
+        "prettier/@typescript-eslint",
     ],
-    "parser": "@typescript-eslint/parser",
-    "parserOptions": {
-        "ecmaVersion": 12,
-        "sourceType": "module"
+    parser: "@typescript-eslint/parser",
+    parserOptions: {
+        ecmaVersion: 2018,
+        project: "./tsconfig.json",
+        sourceType: "module",
     },
-    "plugins": [
-        "@typescript-eslint"
+    plugins: ["@typescript-eslint"],
+    root: true,
+    rules: {
+        "no-console": "warn",
+    },
+    overrides: [
+        {
+            files: ["**/*.test.ts?(x)"],
+            rules: {
+                // Disable rules that are lower value in tests
+                "@typescript-eslint/explicit-function-return-type": "off",
+                "@typescript-eslint/no-non-null-assertion": "off",
+                "@typescript-eslint/no-unsafe-assignment": "off",
+                "@typescript-eslint/no-unsafe-call": "off",
+                "@typescript-eslint/no-unsafe-return": "off",
+                "@typescript-eslint/no-var-requires": "off",
+                "@typescript-eslint/restrict-template-expressions": "off",
+            },
+        },
     ],
-    "rules": {
-        "no-console": 1
-    }
 };

@@ -1,9 +1,7 @@
 {
     "compilerOptions": {
-        "target": "ES2015",
-        "lib": ["dom", "dom.iterable", "es2015"],
-        "module": "CommonJS",
-        "allowJs": false,
+        "target": "es2019",
+        "module": "commonjs",
         "declaration": true,
         "downlevelIteration": true,
         "esModuleInterop": true,
@@ -11,9 +9,9 @@
         "isolatedModules": true,
         "moduleResolution": "node",
         "noImplicitAny": false,
-        "outDir": "dist",
+        "noUnusedLocals": true,
+        "outDir": "lib",
         "strict": true
     },
-    "include": ["src"],
-    "exclude": ["**/__tests__/**/*.*"]
+    "include": ["src"]
 }

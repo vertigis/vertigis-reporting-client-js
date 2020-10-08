@@ -31,9 +31,11 @@ interface JobStatusResponse {
  * @param url The URL of the portal item.
  * @returns An object containing the portal URL and the item ID.
  */
-export function parseItemUrl(url: string): { itemId: string, portalUrl: string } {
+export function parseItemUrl(
+    url: string
+): { itemId: string; portalUrl: string } {
     const portalItemRegex = /^(https?:\/\/.*?)\/home\/item.html.*?id=([a-f0-9]+)/i;
-    const urlParts = url.match(portalItemRegex);
+    const urlParts = portalItemRegex.exec(url);
 
     if (urlParts && urlParts.length > 2) {
         return {
@@ -48,9 +50,9 @@ export function parseItemUrl(url: string): { itemId: string, portalUrl: string }
 /**
  * Options for running a report.
  */
-interface RunOptions {
+export interface RunOptions {
     /**
-     * The culture to use for localization. For example "en-US". 
+     * The culture to use for localization. For example "en-US".
      * This option is supported from Geocortex Reporting 5.9 and Geocortex Printing 5.6.
      */
     culture?: string;
@@ -58,10 +60,6 @@ interface RunOptions {
      * The DPI to use when rendering a map print.
      */
     dpi?: number;
-    /**
-     * The portal item ID of the report item.
-     */
-    itemId: string;
     /**
      * An object specifying the parameters to submit to the report.
      * The keys of the object must match the parameter names that exist in the report.
@@ -77,38 +75,56 @@ interface RunOptions {
      */
     token?: string;
     /**
-     * Whether to check the status of the job using polling. 
+     * Whether to check the status of the job using polling.
      * If true, the service will be polled periodically for results.
      * If false, connect to the service using WebSockets to listen for results.
      * It is recommended to use WebSockets where possible.
-     * The default is false. 
+     * The default is false.
      */
     usePolling?: boolean;
 }
 
 /**
  * Runs a Geocortex report or print.
+ * @param itemId The portal item ID of the report item.
  * @param options The options that define the report to run and how to run it.
  * @returns A URL to the report output file.
  */
-export async function run(options: RunOptions): Promise<string> {
-    if (!options) {
-        throw new Error("options are required.");
-    }
-    if (!options.itemId) {
+export async function run(
+    itemId: string,
+    options: RunOptions = {}
+): Promise<string> {
+    if (!itemId) {
         throw new Error("itemId is required.");
     }
 
     // Ensure portal doesn't end with a trailing slash
-    const portalUrl = options.portalUrl?.replace(/\/$/, "") || "https://www.arcgis.com";
+    const portalUrl =
+        options.portalUrl?.replace(/\/$/, "") || "https://www.arcgis.com";
 
-    const portalItemInfo = await getPortalItemInfo(options.itemId, portalUrl, options.token);
+    const portalItemInfo = await getPortalItemInfo(
+        itemId,
+        portalUrl,
+        options.token
+    );
     validatePortalItemInfo(portalItemInfo);
 
     const apiServiceUrl = `${portalItemInfo.url}service`;
-    const bearerToken = await getBearerToken(apiServiceUrl, portalUrl, options.token);
-    const ticket = await startJob(portalUrl, options.itemId, apiServiceUrl, bearerToken, options.parameters, options.culture, options.dpi);
-    const tag = await watchJob(options.itemId, apiServiceUrl, ticket, options.usePolling);
+    const bearerToken = await getBearerToken(
+        apiServiceUrl,
+        portalUrl,
+        options.token
+    );
+    const ticket = await startJob(
+        portalUrl,
+        itemId,
+        apiServiceUrl,
+        bearerToken,
+        options.parameters,
+        options.culture,
+        options.dpi
+    );
+    const tag = await watchJob(apiServiceUrl, ticket, options.usePolling);
     const downloadUrl = `${apiServiceUrl}/job/result?ticket=${ticket}&tag=${tag}`;
 
     return downloadUrl;
@@ -120,14 +136,10 @@ async function getPortalItemInfo(
     portalUrl: string,
     token?: string
 ): Promise<PortalItemResponse> {
-    const url = `${portalUrl}/sharing/content/items/${itemId}?f=json&token=${token || ""}`;
-    let response: Response;
-
-    try {
-        response = await fetch(url);
-    } catch (error) {
-        throw new Error("A network error occurred fetching the item.");
-    }
+    const url = `${portalUrl}/sharing/content/items/${itemId}?f=json&token=${
+        token || ""
+    }`;
+    const response = await fetch(url);
 
     // Check if an error response was received during the fetch
     if (!response.ok) {
@@ -147,8 +159,15 @@ async function getPortalItemInfo(
 // Ensures that a portal item's info contain the "Geocortex Printing" or "Geocortex Reporting" keyword
 // and that the URL property has a value.
 function validatePortalItemInfo(info: PortalItemResponse): void {
-    if (!info.typeKeywords || !Array.from(info.typeKeywords).some(x => x === "Geocortex Printing" || x === "Geocortex Reporting")) {
-        throw new Error("The configured URL does not reference a valid template.");
+    if (
+        !info.typeKeywords ||
+        !Array.from(info.typeKeywords).some(
+            (x) => x === "Geocortex Printing" || x === "Geocortex Reporting"
+        )
+    ) {
+        throw new Error(
+            "The configured URL does not reference a valid template."
+        );
     }
 
     if (!info.url) {
@@ -182,7 +201,9 @@ async function getBearerToken(
     try {
         response = await fetch(`${serviceUrl}/auth/token/run`, options);
     } catch {
-        throw new Error("A network error occurred fetching an authorization token.");
+        throw new Error(
+            "A network error occurred fetching an authorization token."
+        );
     }
 
     if (!response.ok) {
@@ -190,7 +211,10 @@ async function getBearerToken(
     }
 
     const responseJson = await response.json();
-    const bearerToken = responseJson.response && responseJson.response.token ? responseJson.response.token : "";
+    const bearerToken =
+        responseJson.response && responseJson.response.token
+            ? responseJson.response.token
+            : "";
 
     return `Bearer ${bearerToken}`;
 }
@@ -264,14 +288,13 @@ async function startJob(
 }
 
 async function watchJob(
-    itemId: string,
     apiServiceUrl: string,
     ticket: string,
     usePolling = false
 ): Promise<string> {
-    let tag;
+    let tag: string | undefined;
 
-    if (!usePolling && "WebSocket" in window || "MozWebSocket" in window) {
+    if (!usePolling && "WebSocket" in globalThis) {
         tag = await watchJobWithSocket(apiServiceUrl, ticket);
     }
 
@@ -289,22 +312,27 @@ async function watchJob(
 async function watchJobWithSocket(
     apiServiceUrl: string,
     ticket: string
-): Promise<string> {
+): Promise<string | undefined> {
     apiServiceUrl = apiServiceUrl.replace(/^http/, "ws");
 
-    return new Promise<string>((resolve) => {
-        const socket = new WebSocket(`${apiServiceUrl}/job/artifacts?ticket=${ticket}`);
+    return new Promise<string | undefined>((resolve) => {
+        const socket = new WebSocket(
+            `${apiServiceUrl}/job/artifacts?ticket=${ticket}`
+        );
 
-        socket.onmessage = async (message): Promise<void> => {
+        socket.addEventListener("message", (message) => {
             const messageJson =
-                typeof message.data === "string" ? JSON.parse(message.data) : message.data;
+                typeof message.data === "string"
+                    ? JSON.parse(message.data)
+                    : message.data;
 
             // The server will send a message with 'final=true' to indicate it is
             // closing the connection. Let's close the socket on our end and resolve
             // the promise.
             if (messageJson.final) {
                 socket.close();
-                resolve(undefined);
+                resolve();
+                return;
             }
 
             const tag = checkJobStatusResponse(messageJson);
@@ -312,41 +340,42 @@ async function watchJobWithSocket(
             if (tag) {
                 socket.close();
                 resolve(tag);
+                return;
             }
 
             // If no tag is received, resolve and allow fall back to polling.
             resolve();
-        };
+        });
 
-        socket.onerror = (): void => {
+        socket.addEventListener("error", () => {
             // No need to handle the error, we will fall back to polling.
-            socket.close();
             resolve();
-        };
+        });
     });
 }
 
-async function pollJob(
-    apiServiceUrl: string,
-    ticket: string
-): Promise<string> {
-
+async function pollJob(apiServiceUrl: string, ticket: string): Promise<string> {
     const options = {
         method: "GET",
         responseType: "json",
         headers: { "Content-Type": "application/json" },
     };
 
-    let tag;
+    let tag: string | undefined;
 
     while (!tag) {
         await delay(1000);
         let response: Response;
 
         try {
-            response = await fetch(`${apiServiceUrl}/job/artifacts?ticket=${ticket}`, options);
+            response = await fetch(
+                `${apiServiceUrl}/job/artifacts?ticket=${ticket}`,
+                options
+            );
         } catch {
-            throw new Error("A network error occurred checking the job status.");
+            throw new Error(
+                "A network error occurred checking the job status."
+            );
         }
 
         if (!response.ok) {
@@ -360,7 +389,9 @@ async function pollJob(
     return tag;
 }
 
-function checkJobStatusResponse(response: JobStatusResponse): string | undefined {
+function checkJobStatusResponse(
+    response: JobStatusResponse
+): string | undefined {
     const results = response.results;
     const error = response.error;
     const genericErrorMessage = "The request could not be completed.";
@@ -368,7 +399,9 @@ function checkJobStatusResponse(response: JobStatusResponse): string | undefined
     if (error) {
         throwError(error.message, error.status);
     } else if (results) {
-        const result = results.find((result) => result["$type"] === "JobResult");
+        const result = results.find(
+            (result) => result["$type"] === "JobResult"
+        );
 
         if (result) {
             return result.tag;
@@ -391,14 +424,15 @@ function checkJobStatusResponse(response: JobStatusResponse): string | undefined
 }
 
 function throwError(statusText: string, status?: number): void {
-    const message = status
-        ? `Error code: ${status}. Response error: "${statusText}"`
-        : `Response error: "${statusText}"`;
+    const message =
+        typeof status === "number"
+            ? `Error code: ${status}. Response error: "${statusText}"`
+            : `Response error: "${statusText}"`;
     throw new Error(message);
 }
 
 function delay(ms = 0): Promise<void> {
-    return new Promise<void>(resolve => {
+    return new Promise<void>((resolve) => {
         setTimeout(resolve, ms);
     });
 }

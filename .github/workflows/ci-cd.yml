@@ -54,6 +54,8 @@ jobs:
               with:
                   node-version: 12.x
 
+            - run: npm install
+
             - name: Release 🚀
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

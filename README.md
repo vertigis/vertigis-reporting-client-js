@@ -17,7 +17,7 @@ The client supports the latest, stable releases of all major browsers. Internet 
 
 This package is published to [npm](https://www.npmjs.com/package/@vertigis/reporting-client/), and can be installed using `npm`:
 
-```
+```sh
 npm install @vertigis/reporting-client
 ```
 

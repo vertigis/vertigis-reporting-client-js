@@ -11,6 +11,22 @@ interface Parameter {
 interface PortalItemResponse {
     typeKeywords?: string[];
     url?: string;
+    error?: {
+        message: string;
+        code?: number;
+    };
+}
+
+interface TokenResponse {
+    response?: {
+        token?: string;
+    };
+}
+
+interface JobRunResponse {
+    response?: {
+        ticket: string;
+    };
 }
 
 interface JobStatusResponse {
@@ -24,6 +40,10 @@ interface JobStatusResponse {
         message: string;
         status: number;
     };
+}
+
+interface WsJobStatusResponse extends JobStatusResponse {
+    final?: boolean;
 }
 
 /**
@@ -98,23 +118,36 @@ export async function run(
         throw new Error("itemId is required.");
     }
 
-    // Ensure portal doesn't end with a trailing slash
+    // Ensure the portal URL doesn't end with a trailing slash
     const portalUrl =
         options.portalUrl?.replace(/\/$/, "") || "https://www.arcgis.com";
 
+    // Fetch the portal item
     const portalItemInfo = await getPortalItemInfo(
         itemId,
         portalUrl,
         options.token
     );
-    validatePortalItemInfo(portalItemInfo);
 
+    // Ensure it is a valid item
+    if (!isValidItemType(portalItemInfo)) {
+        throw new Error(`The item '${itemId}' is not a valid template type.`);
+    }
+    if (!portalItemInfo.url) {
+        throw new Error(`The item '${itemId}' does not contain a service URL.`);
+    }
+
+    // Infer the URL to the reporting service from the item
     const apiServiceUrl = `${portalItemInfo.url}service`;
+
+    // Authentication
     const bearerToken = await getBearerToken(
         apiServiceUrl,
         portalUrl,
         options.token
     );
+
+    // Start the reporting job
     const ticket = await startJob(
         portalUrl,
         itemId,
@@ -124,9 +157,12 @@ export async function run(
         options.culture,
         options.dpi
     );
-    const tag = await watchJob(apiServiceUrl, ticket, options.usePolling);
-    const downloadUrl = `${apiServiceUrl}/job/result?ticket=${ticket}&tag=${tag}`;
 
+    // Watch or poll the job
+    const tag = await watchJob(apiServiceUrl, ticket, options.usePolling);
+
+    // Assemble the URL to the completed report
+    const downloadUrl = `${apiServiceUrl}/job/result?ticket=${ticket}&tag=${tag}`;
     return downloadUrl;
 }
 
@@ -143,36 +179,27 @@ async function getPortalItemInfo(
 
     // Check if an error response was received during the fetch
     if (!response.ok) {
-        throwError(response.statusText, response.status);
+        throw createError(response.statusText, response.status);
     }
 
-    const portalInfo = await response.json();
+    const portalInfo = (await response.json()) as PortalItemResponse;
 
     // Esri wraps errors in a 200 response, so an additional error check is required.
     if (portalInfo.error) {
-        throwError(portalInfo.error.message, portalInfo.error.code);
+        throw createError(portalInfo.error.message, portalInfo.error.code);
     }
 
     return portalInfo;
 }
 
 // Ensures that a portal item's info contain the "Geocortex Printing" or "Geocortex Reporting" keyword
-// and that the URL property has a value.
-function validatePortalItemInfo(info: PortalItemResponse): void {
-    if (
+function isValidItemType(info: PortalItemResponse): boolean {
+    return !(
         !info.typeKeywords ||
         !Array.from(info.typeKeywords).some(
             (x) => x === "Geocortex Printing" || x === "Geocortex Reporting"
         )
-    ) {
-        throw new Error(
-            "The configured URL does not reference a valid template."
-        );
-    }
-
-    if (!info.url) {
-        throw new Error("The template does not contain a service URL.");
-    }
+    );
 }
 
 // Gets a bearer token from the service.
@@ -207,14 +234,11 @@ async function getBearerToken(
     }
 
     if (!response.ok) {
-        throwError(response.statusText, response.status);
+        throw createError(response.statusText, response.status);
     }
 
-    const responseJson = await response.json();
-    const bearerToken =
-        responseJson.response && responseJson.response.token
-            ? responseJson.response.token
-            : "";
+    const responseJson = (await response.json()) as TokenResponse;
+    const bearerToken = responseJson?.response?.token || "";
 
     return `Bearer ${bearerToken}`;
 }
@@ -274,14 +298,14 @@ async function startJob(
     }
 
     if (!response.ok) {
-        throwError(response.statusText, response.status);
+        throw createError(response.statusText, response.status);
     }
 
-    const responseJson = await response.json();
+    const responseJson = (await response.json()) as JobRunResponse;
     const data = responseJson.response;
 
     if (!data || !data.ticket) {
-        throwError("The service did not provide a ticket.");
+        throw createError("The service did not provide a ticket.");
     }
 
     return data.ticket;
@@ -303,7 +327,7 @@ async function watchJob(
     }
 
     if (!tag) {
-        throwError("The service did not provide a tag.");
+        throw createError("The service did not provide a tag.");
     }
 
     return tag;
@@ -321,10 +345,9 @@ async function watchJobWithSocket(
         );
 
         socket.addEventListener("message", (message) => {
-            const messageJson =
-                typeof message.data === "string"
-                    ? JSON.parse(message.data)
-                    : message.data;
+            const messageJson = (typeof message.data === "string"
+                ? JSON.parse(message.data)
+                : message.data) as WsJobStatusResponse;
 
             // The server will send a message with 'final=true' to indicate it is
             // closing the connection. Let's close the socket on our end and resolve
@@ -379,10 +402,10 @@ async function pollJob(apiServiceUrl: string, ticket: string): Promise<string> {
         }
 
         if (!response.ok) {
-            throwError(response.statusText, response.status);
+            throw createError(response.statusText, response.status);
         }
 
-        const responseJson = await response.json();
+        const responseJson = (await response.json()) as JobStatusResponse;
         tag = checkJobStatusResponse(responseJson);
     }
 
@@ -397,7 +420,7 @@ function checkJobStatusResponse(
     const genericErrorMessage = "The request could not be completed.";
 
     if (error) {
-        throwError(error.message, error.status);
+        throw createError(error.message, error.status);
     } else if (results) {
         const result = results.find(
             (result) => result["$type"] === "JobResult"
@@ -414,16 +437,16 @@ function checkJobStatusResponse(
                 (result) => result["$type"] && result["$type"].endsWith("error")
             );
             const message = error?.message || genericErrorMessage;
-            throwError(message, error?.code);
+            throw createError(message, error?.code);
         }
     } else {
-        throwError(genericErrorMessage);
+        throw createError(genericErrorMessage);
     }
 
     return undefined;
 }
 
-function throwError(statusText: string, status?: number): void {
+function createError(statusText: string, status?: number): void {
     const message =
         typeof status === "number"
             ? `Error code: ${status}. Response error: "${statusText}"`

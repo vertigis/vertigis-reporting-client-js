@@ -2,7 +2,11 @@
 
 ![CI/CD](https://github.com/geocortex/vertigis-reporting-client-js/workflows/CI/CD/badge.svg) ![npm](https://img.shields.io/npm/v/@vertigis/reporting-client)
 
-This library makes it easy to run [Geocortex Reporting](https://www.geocortex.com/products/geocortex-reporting/) or [Geocortex Printing](https://www.geocortex.com/products/geocortex-printing/) jobs.
+This library makes it easy to run [Geocortex Reporting](https://www.geocortex.com/products/geocortex-reporting/) or [Geocortex Printing](https://www.geocortex.com/products/geocortex-printing/) jobs in the browser.
+
+## Browser Support
+
+The client supports the latest, stable releases of all major browsers. Internet Explorer 11 is not supported.
 
 ## Requirements
 

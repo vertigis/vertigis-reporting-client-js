@@ -69,7 +69,7 @@ const url = await run("itemId", {
 });
 ```
 
-Note: the parameter names must mach the names of parameters that exist in the report.
+Note: the parameter names must match the names of parameters that exist in the report.
 
 ### Run a secured report, or a report that accesses secured ArcGIS content
 

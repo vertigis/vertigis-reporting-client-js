@@ -81,4 +81,4 @@ const url = await run("itemId", {
 
 ## Documentation
 
-Find [further documentation on the SDK](https://developers.geocortex.com/docs/reporting/sdk-overview/) on the [Geocortex Developer Center](https://developers.geocortex.com/docs/reporting/overview/)
+Find [further documentation on the SDK](https://developers.geocortex.com/docs/reporting/sdk-overview/) on the [Geocortex Developer Center](https://developers.geocortex.com/docs/reporting/overview/).

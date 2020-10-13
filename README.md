@@ -17,7 +17,7 @@ The client supports the latest, stable releases of all major browsers. Internet 
 
 This package is published to [npm](https://www.npmjs.com/package/@vertigis/reporting-client/), and can be installed using `npm`:
 
-```
+```sh
 npm install @vertigis/reporting-client
 ```
 
@@ -69,7 +69,7 @@ const url = await run("itemId", {
 });
 ```
 
-Note: the parameter names must match the names of parameters that exist in the report.
+Note: the parameter keys must mach the names of parameters that exist in the report.
 
 ### Run a secured report, or a report that accesses secured ArcGIS content
 
@@ -81,4 +81,4 @@ const url = await run("itemId", {
 
 ## Documentation
 
-Find [further documentation on the SDK](https://developers.geocortex.com/docs/reporting/sdk-overview/) on the [Geocortex Developer Center](https://developers.geocortex.com/docs/reporting/overview/)
+Find [further documentation on the SDK](https://developers.geocortex.com/docs/reporting/sdk-overview/) on the [Geocortex Developer Center](https://developers.geocortex.com/docs/reporting/overview/).

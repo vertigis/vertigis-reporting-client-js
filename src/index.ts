@@ -286,9 +286,13 @@ async function startJob(
         body: JSON.stringify(body),
         headers: {
             "Content-Type": "application/json",
-            Authorization: bearerToken,
         },
     };
+
+    if (bearerToken) {
+        requestOptions.headers["Authorization"] = bearerToken;
+    }
+
     let response: Response;
 
     try {

@@ -39,6 +39,7 @@ const url = await run("itemId", options?);
 | dpi        | number  | The DPI to use when rendering a map print. Defaults to `96`.                                                                                                                      |
 | parameters | object  | An object specifying additional parameters to pass to the job.                                                                                                                    |
 | portalUrl  | string  | The URL of the ArcGIS Portal instance to use. Defaults to ArcGIS Online: `"https://www.arcgis.com"`.                                                                              |
+| resultName | string  | The name assigned to the output file. It is used as the name of the tab when viewing the result in a browser and as the suggested name when downloading the result. |
 | token      | string  | The Portal access token to be used to access secured resources. If not provided requests to secured resources will fail.                                                          |
 | usePolling | boolean | When `true`, check for results by polling the service. When `false`, check for results using WebSockets. It is recommended to use WebSockets where possible. Defaults to `false`. |
 
@@ -55,6 +56,15 @@ const url = await run("itemId");
 ```js
 const url = await run("itemId", {
     portalUrl: "https://server.domain.com/portal",
+});
+```
+
+### Run a report and specify the name of the resulting PDF
+
+```js
+const url = await run("itemId", {
+    portalUrl: "https://server.domain.com/portal",
+    resultName: "My Report"
 });
 ```
 

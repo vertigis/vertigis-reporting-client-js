@@ -93,7 +93,7 @@ export interface RunOptions {
      * The name assigned to the output file. It is used as the name of the tab when viewing the
      * result in a browser and as the suggested name when downloading the result.
      */
-    resultName?: string
+    resultFileName?: string;
     /**
      * An optional ArcGIS token for accessing a secured report.
      * If the report is secured, or accesses secured ArcGIS content the token is required.
@@ -161,7 +161,7 @@ export async function run(
         options.parameters,
         options.culture,
         options.dpi,
-        options.resultName
+        options.resultFileName
     );
 
     // Watch or poll the job
@@ -282,7 +282,7 @@ async function startJob(
         template: {
             itemId: itemId,
             portalUrl,
-            title
+            title,
         },
         parameters: params,
         culture,

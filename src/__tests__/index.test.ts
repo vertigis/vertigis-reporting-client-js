@@ -93,6 +93,7 @@ describe("run", () => {
 
         const mockFetch = jest.fn();
         global.fetch = mockFetch;
+        jest.spyOn(global, "fetch");
 
         function mockResponseOnce(
             response: Record<string, unknown>,
@@ -126,11 +127,26 @@ describe("run", () => {
                     parameter1: "asdf",
                     parameter2: [1, 2, 3],
                 },
+                resultFileName: "My Report",
                 token: MOCK_PORTAL_TOKEN,
                 usePolling: true,
             })
         ).toBe(
             `${DEFAULT_REPORTING_URL}/service/job/result?ticket=${MOCK_REPORT_TICKET}&tag=${MOCK_REPORT_TAG}`
+        );
+        expect(global.fetch).toHaveBeenNthCalledWith(
+            3,
+            "https://apps.geocortex.com/reporting/service/job/run",
+            expect.objectContaining({
+                body:
+                    '{"template":{"itemId":"mock-portal-item-id","portalUrl":"https://www.arcgis.com","title":"My Report"},"parameters":[{"name":"parameter1","value":"asdf"},{"containsMultipleValues":true,"name":"parameter2","values":[1,2,3]}]}',
+                headers: {
+                    Authorization: "Bearer mock-reporting-token",
+                    "Content-Type": "application/json",
+                },
+                method: "POST",
+                responseType: "json",
+            })
         );
     });
     test("itemId option is required", async () => {

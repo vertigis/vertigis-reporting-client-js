@@ -90,6 +90,11 @@ export interface RunOptions {
      */
     portalUrl?: string;
     /**
+     * The name assigned to the output file. It is used as the name of the tab when viewing the
+     * result in a browser and as the suggested name when downloading the result.
+     */
+    resultFileName?: string;
+    /**
      * An optional ArcGIS token for accessing a secured report.
      * If the report is secured, or accesses secured ArcGIS content the token is required.
      */
@@ -155,7 +160,8 @@ export async function run(
         bearerToken,
         options.parameters,
         options.culture,
-        options.dpi
+        options.dpi,
+        options.resultFileName
     );
 
     // Watch or poll the job
@@ -250,7 +256,8 @@ async function startJob(
     bearerToken: string,
     parameters?: Record<string, SingleParameterValue | MultiParameterValue>,
     culture?: string,
-    dpi?: number
+    dpi?: number,
+    title?: string
 ): Promise<string> {
     const params: Parameter[] = [];
     if (parameters) {
@@ -275,6 +282,7 @@ async function startJob(
         template: {
             itemId: itemId,
             portalUrl,
+            title,
         },
         parameters: params,
         culture,

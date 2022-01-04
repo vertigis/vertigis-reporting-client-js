@@ -1,6 +1,19 @@
 type SingleParameterValue = string | number | boolean;
 type MultiParameterValue = string[] | number[] | boolean[];
 
+interface MapValue {
+    $type: string;
+    item: {
+        type: string;
+        extent: any;
+    }
+    itemData: any;
+}
+
+interface MapParameter extends MapValue {
+    name: string;
+}
+
 interface Parameter {
     name: string;
     containsMultipleValues?: boolean;
@@ -84,7 +97,7 @@ export interface RunOptions {
      * An object specifying the parameters to submit to the report.
      * The keys of the object must match the parameter names that exist in the report.
      */
-    parameters?: Record<string, SingleParameterValue | MultiParameterValue>;
+    parameters?: Record<string, SingleParameterValue | MultiParameterValue | MapValue>;
     /**
      * The URL of the ArcGIS Portal instance to use. Defaults to ArcGIS Online: "https://www.arcgis.com".
      */
@@ -254,12 +267,12 @@ async function startJob(
     itemId: string,
     apiServiceUrl: string,
     bearerToken: string,
-    parameters?: Record<string, SingleParameterValue | MultiParameterValue>,
+    parameters?: Record<string, SingleParameterValue | MultiParameterValue | MapValue>,
     culture?: string,
     dpi?: number,
     title?: string
 ): Promise<string> {
-    const params: Parameter[] = [];
+    const params: (Parameter | MapParameter)[] = [];
     if (parameters) {
         for (const name in parameters) {
             const value = parameters[name];
@@ -269,10 +282,12 @@ async function startJob(
                     name,
                     values: value,
                 });
+            } else if ((value as MapValue).$type) {
+                params.push({...value as MapValue, name})
             } else {
                 params.push({
                     name,
-                    value,
+                    value: value as SingleParameterValue,
                 });
             }
         }

@@ -5,9 +5,9 @@ interface MapValue {
     $type: string;
     item: {
         type: string;
-        extent: any;
+        extent: [[number, number], [number, number]];
     }
-    itemData: any;
+    itemData: Record<string, string | number | object>;
 }
 
 interface MapParameter extends MapValue {

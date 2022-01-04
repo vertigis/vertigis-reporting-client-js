@@ -7,7 +7,7 @@ interface MapValue {
         type: string;
         extent: [[number, number], [number, number]];
     }
-    // eslint-disable-next-line no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     itemData: any;
 }
 

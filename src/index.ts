@@ -7,7 +7,8 @@ interface MapValue {
         type: string;
         extent: [[number, number], [number, number]];
     }
-    itemData: Record<string, string | number | object>;
+    // eslint-disable-next-line no-explicit-any
+    itemData: any;
 }
 
 interface MapParameter extends MapValue {

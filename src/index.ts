@@ -283,7 +283,7 @@ async function startJob(
                     name,
                     values: value,
                 });
-            } else if ((value as MapValue).$type) {
+            } else if ((value as MapValue)?.$type) {
                 params.push({...value as MapValue, name})
             } else {
                 params.push({

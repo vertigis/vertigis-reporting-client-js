@@ -86,8 +86,9 @@ export function parseItemUrl(
  */
 export interface RunOptions {
     /**
-     * The culture to use for localization. For example "en-US".
-     * This option is supported from Geocortex Reporting 5.9 and Geocortex Printing 5.6.
+     * The culture to use for localization. For example "en-US". This option is
+     * supported from VertiGIS Studio Reporting 5.9 and VertiGIS Studio Printing
+     * 5.6.
      */
     culture?: string;
     /**
@@ -124,7 +125,7 @@ export interface RunOptions {
 }
 
 /**
- * Runs a Geocortex report or print.
+ * Runs a VertiGIS Studio report or print.
  * @param itemId The portal item ID of the report item.
  * @param options The options that define the report to run and how to run it.
  * @returns A URL to the report output file.

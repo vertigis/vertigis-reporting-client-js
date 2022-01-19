@@ -51,7 +51,7 @@ describe("run", () => {
         const MOCK_REPORT_TICKET = "mock-report-ticket";
         const MOCK_REPORT_TAG = "mock-report-tag";
 
-        const DEFAULT_REPORTING_URL = "https://apps.geocortex.com/reporting";
+        const DEFAULT_REPORTING_URL = "https://apps.vertigisstudio.com/reporting";
         const DEFAULT_PORTAL_URL = "https://www.arcgis.com";
 
         // https://www.arcgis.com/sharing/content/items/25c278bd96aa49949f8a89564c6347ce?f=json&token=
@@ -61,14 +61,14 @@ describe("run", () => {
             url: `${DEFAULT_REPORTING_URL}/`,
         };
 
-        // https://apps.geocortex.com/reporting/service/auth/token/run
+        // https://apps.vertigisstudio.com/reporting/service/auth/token/run
         const MOCK_REPORTING_TOKEN_RESPONSE = {
             response: {
                 token: MOCK_REPORTING_TOKEN,
             },
         };
 
-        // https://apps.geocortex.com/reporting/service/job/run
+        // https://apps.vertigisstudio.com/reporting/service/job/run
         const MOCK_REPORTING_JOB_RUN_RESPONSE = {
             response: {
                 $type: "TokenResponse",
@@ -76,7 +76,7 @@ describe("run", () => {
             },
         };
 
-        // https://apps.geocortex.com/reporting/service/job/artifacts?ticket=
+        // https://apps.vertigisstudio.com/reporting/service/job/artifacts?ticket=
         const MOCK_REPORTING_JOB_ARTIFACTS_RESPONSE_PENDING = {
             results: [],
         };
@@ -136,7 +136,7 @@ describe("run", () => {
         );
         expect(global.fetch).toHaveBeenNthCalledWith(
             3,
-            "https://apps.geocortex.com/reporting/service/job/run",
+            "https://apps.vertigisstudio.com/reporting/service/job/run",
             expect.objectContaining({
                 body:
                     '{"template":{"itemId":"mock-portal-item-id","portalUrl":"https://www.arcgis.com","title":"My Report"},"parameters":[{"name":"parameter1","value":"asdf"},{"containsMultipleValues":true,"name":"parameter2","values":[1,2,3]}]}',
@@ -166,5 +166,5 @@ describe("run", () => {
 //         usePolling: true
 //     });
 //     console.log(href)
-//     expect(href).toMatch("https://apps.geocortex.com/reporting/service/job/result?ticket");
+//     expect(href).toMatch("https://apps.vertigisstudio.com/reporting/service/job/result?ticket");
 // }, 100000);

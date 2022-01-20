@@ -2,7 +2,7 @@
 
 ![CI/CD](https://github.com/geocortex/vertigis-reporting-client-js/workflows/CI/CD/badge.svg) ![npm](https://img.shields.io/npm/v/@vertigis/reporting-client)
 
-This library makes it easy to run [VertiGIS Studio Reporting](https://www.vertigisstudio.com/products/geocortex-reporting/) or [VertiGIS Studio Printing](https://www.vertigisstudio.com/products/geocortex-printing/) jobs in the browser.
+This library makes it easy to run [VertiGIS Studio Reporting](https://www.vertigisstudio.com/products/vertigis-studio-reporting/) or [VertiGIS Studio Printing](https://www.vertigisstudio.com/products/vertigis-studio-printing/) jobs in the browser.
 
 ## Browser Support
 

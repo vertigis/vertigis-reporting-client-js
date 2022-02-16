@@ -1,6 +1,6 @@
 {
     "name": "@vertigis/reporting-client",
-    "description": "Geocortex Reporting client for the browser",
+    "description": "VertiGIS Studio Reporting client for the browser",
     "version": "0.0.0-semantically-released",
     "repository": {
         "type": "git",

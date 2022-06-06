@@ -6,7 +6,7 @@ interface MapValue {
     item: {
         type: string;
         extent: [[number, number], [number, number]];
-    }
+    };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     itemData: any;
 }
@@ -65,10 +65,12 @@ interface WsJobStatusResponse extends JobStatusResponse {
  * @param url The URL of the portal item.
  * @returns An object containing the portal URL and the item ID.
  */
-export function parseItemUrl(
-    url: string
-): { itemId: string; portalUrl: string } {
-    const portalItemRegex = /^(https?:\/\/.*?)\/home\/item.html.*?id=([a-f0-9]+)/i;
+export function parseItemUrl(url: string): {
+    itemId: string;
+    portalUrl: string;
+} {
+    const portalItemRegex =
+        /^(https?:\/\/.*?)\/home\/item.html.*?id=([a-f0-9]+)/i;
     const urlParts = portalItemRegex.exec(url);
 
     if (urlParts && urlParts.length > 2) {
@@ -99,7 +101,10 @@ export interface RunOptions {
      * An object specifying the parameters to submit to the report.
      * The keys of the object must match the parameter names that exist in the report.
      */
-    parameters?: Record<string, SingleParameterValue | MultiParameterValue | MapValue>;
+    parameters?: Record<
+        string,
+        SingleParameterValue | MultiParameterValue | MapValue
+    >;
     /**
      * The URL of the ArcGIS Portal instance to use. Defaults to ArcGIS Online: "https://www.arcgis.com".
      */
@@ -269,7 +274,10 @@ async function startJob(
     itemId: string,
     apiServiceUrl: string,
     bearerToken: string,
-    parameters?: Record<string, SingleParameterValue | MultiParameterValue | MapValue>,
+    parameters?: Record<
+        string,
+        SingleParameterValue | MultiParameterValue | MapValue
+    >,
     culture?: string,
     dpi?: number,
     title?: string
@@ -285,7 +293,7 @@ async function startJob(
                     values: value,
                 });
             } else if ((value as MapValue)?.$type) {
-                params.push({...value as MapValue, name})
+                params.push({ ...(value as MapValue), name });
             } else {
                 params.push({
                     name,
@@ -374,16 +382,18 @@ async function watchJobWithSocket(
         );
 
         socket.addEventListener("message", (message) => {
-            const messageJson = (typeof message.data === "string"
-                ? JSON.parse(message.data)
-                : message.data) as WsJobStatusResponse;
+            const messageJson = (
+                typeof message.data === "string"
+                    ? JSON.parse(message.data)
+                    : message.data
+            ) as WsJobStatusResponse;
 
             // The server will send a message with 'final=true' to indicate it is
             // closing the connection. Let's close the socket on our end and resolve
             // the promise.
             if (messageJson.final) {
                 socket.close();
-                resolve();
+                resolve(undefined);
                 return;
             }
 
@@ -396,12 +406,12 @@ async function watchJobWithSocket(
             }
 
             // If no tag is received, resolve and allow fall back to polling.
-            resolve();
+            resolve(undefined);
         });
 
         socket.addEventListener("error", () => {
             // No need to handle the error, we will fall back to polling.
-            resolve();
+            resolve(undefined);
         });
     });
 }

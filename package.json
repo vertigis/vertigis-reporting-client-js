@@ -4,12 +4,12 @@
     "version": "0.0.0-semantically-released",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/geocortex/vertigis-reporting-client-js.git"
+        "url": "git+https://github.com/vertigis/vertigis-reporting-client-js.git"
     },
     "bugs": {
-        "url": "https://github.com/geocortex/vertigis-reporting-client-js/issues"
+        "url": "https://github.com/vertigis/vertigis-reporting-client-js/issues"
     },
-    "homepage": "https://github.com/geocortex/vertigis-reporting-client-js#readme",
+    "homepage": "https://github.com/vertigis/vertigis-reporting-client-js#readme",
     "license": "MIT",
     "main": "lib/index.js",
     "files": [

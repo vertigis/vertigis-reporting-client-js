@@ -1,6 +1,6 @@
 # VertiGIS Studio Reporting Client for JavaScript
 
-![CI/CD](https://github.com/geocortex/vertigis-reporting-client-js/workflows/CI/CD/badge.svg) ![npm](https://img.shields.io/npm/v/@vertigis/reporting-client)
+![CI/CD](https://github.com/vertigis/vertigis-reporting-client-js/workflows/CI/CD/badge.svg) ![npm](https://img.shields.io/npm/v/@vertigis/reporting-client)
 
 This library makes it easy to run [VertiGIS Studio Reporting](https://www.vertigisstudio.com/products/vertigis-studio-reporting/) or [VertiGIS Studio Printing](https://www.vertigisstudio.com/products/vertigis-studio-printing/) jobs in the browser.
 
@@ -82,4 +82,4 @@ const url = await run("itemId", {
 
 ## Documentation
 
-Find [further documentation on the SDK](https://developers.geocortex.com/docs/reporting/sdk-overview/) on the [VertiGIS Studio Developer Center](https://developers.geocortex.com/docs/reporting/overview/).
+Find [further documentation on the SDK](https://developers.vertigisstudio.com/docs/reporting/sdk-overview/) on the [VertiGIS Studio Developer Center](https://developers.vertigisstudio.com/docs/reporting/overview/).

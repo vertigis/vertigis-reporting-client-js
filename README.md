@@ -37,6 +37,7 @@ const url = await run("itemId", options?);
 | -------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | culture        | string  | The culture to use for localization. For example `"en-US"`.                                                                                                                       |
 | dpi            | number  | The DPI to use when rendering a map print. Defaults to `96`.                                                                                                                      |
+| format         | string  | The output format of the report. Defaults to `"pdf"`.                                                                                                                             |
 | parameters     | object  | An object specifying additional parameters to pass to the job.                                                                                                                    |
 | portalUrl      | string  | The URL of the ArcGIS Portal instance to use. Defaults to ArcGIS Online: `"https://www.arcgis.com"`.                                                                              |
 | resultFileName | string  | The name assigned to the output file. It is used as the name of the tab when viewing the result in a browser and as the suggested name when downloading the result.               |

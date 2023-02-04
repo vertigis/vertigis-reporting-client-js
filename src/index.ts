@@ -98,6 +98,10 @@ export interface RunOptions {
      */
     dpi?: number;
     /**
+     * The output file format of the report. The default is "pdf".
+     */
+    format?: string;
+    /**
      * An object specifying the parameters to submit to the report.
      * The keys of the object must match the parameter names that exist in the report.
      */
@@ -181,7 +185,8 @@ export async function run(
         options.parameters,
         options.culture,
         options.dpi,
-        options.resultFileName
+        options.resultFileName,
+        options.format
     );
 
     // Watch or poll the job
@@ -280,7 +285,8 @@ async function startJob(
     >,
     culture?: string,
     dpi?: number,
-    title?: string
+    title?: string,
+    format?: string
 ): Promise<string> {
     const params: (Parameter | MapParameter)[] = [];
     if (parameters) {
@@ -312,6 +318,7 @@ async function startJob(
         parameters: params,
         culture,
         dpi,
+        format,
     };
     const requestOptions = {
         method: "POST",

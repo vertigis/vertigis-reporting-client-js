@@ -1,6 +1,6 @@
 # VertiGIS Studio Reporting Client for JavaScript
 
-![CI/CD](https://github.com/geocortex/vertigis-reporting-client-js/workflows/CI/CD/badge.svg) ![npm](https://img.shields.io/npm/v/@vertigis/reporting-client)
+![CI/CD](https://github.com/vertigis/vertigis-reporting-client-js/workflows/CI/CD/badge.svg) ![npm](https://img.shields.io/npm/v/@vertigis/reporting-client)
 
 This library makes it easy to run [VertiGIS Studio Reporting](https://www.vertigisstudio.com/products/vertigis-studio-reporting/) or [VertiGIS Studio Printing](https://www.vertigisstudio.com/products/vertigis-studio-printing/) jobs in the browser.
 
@@ -37,6 +37,7 @@ const url = await run("itemId", options?);
 | -------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | culture        | string  | The culture to use for localization. For example `"en-US"`.                                                                                                                       |
 | dpi            | number  | The DPI to use when rendering a map print. Defaults to `96`.                                                                                                                      |
+| format         | string  | The output format of the report. Defaults to `"pdf"`.                                                                                                                             |
 | parameters     | object  | An object specifying additional parameters to pass to the job.                                                                                                                    |
 | portalUrl      | string  | The URL of the ArcGIS Portal instance to use. Defaults to ArcGIS Online: `"https://www.arcgis.com"`.                                                                              |
 | resultFileName | string  | The name assigned to the output file. It is used as the name of the tab when viewing the result in a browser and as the suggested name when downloading the result.               |
@@ -82,4 +83,4 @@ const url = await run("itemId", {
 
 ## Documentation
 
-Find [further documentation on the SDK](https://developers.geocortex.com/docs/reporting/sdk-overview/) on the [VertiGIS Studio Developer Center](https://developers.geocortex.com/docs/reporting/overview/).
+Find [further documentation on the SDK](https://developers.vertigisstudio.com/docs/reporting/sdk-overview/) on the [VertiGIS Studio Developer Center](https://developers.vertigisstudio.com/docs/reporting/overview/).

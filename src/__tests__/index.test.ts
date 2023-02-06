@@ -51,7 +51,8 @@ describe("run", () => {
         const MOCK_REPORT_TICKET = "mock-report-ticket";
         const MOCK_REPORT_TAG = "mock-report-tag";
 
-        const DEFAULT_REPORTING_URL = "https://apps.vertigisstudio.com/reporting";
+        const DEFAULT_REPORTING_URL =
+            "https://apps.vertigisstudio.com/reporting";
         const DEFAULT_PORTAL_URL = "https://www.arcgis.com";
 
         // https://www.arcgis.com/sharing/content/items/25c278bd96aa49949f8a89564c6347ce?f=json&token=
@@ -130,6 +131,7 @@ describe("run", () => {
                 resultFileName: "My Report",
                 token: MOCK_PORTAL_TOKEN,
                 usePolling: true,
+                format: "pdf",
             })
         ).toBe(
             `${DEFAULT_REPORTING_URL}/service/job/result?ticket=${MOCK_REPORT_TICKET}&tag=${MOCK_REPORT_TAG}`
@@ -138,8 +140,7 @@ describe("run", () => {
             3,
             "https://apps.vertigisstudio.com/reporting/service/job/run",
             expect.objectContaining({
-                body:
-                    '{"template":{"itemId":"mock-portal-item-id","portalUrl":"https://www.arcgis.com","title":"My Report"},"parameters":[{"name":"parameter1","value":"asdf"},{"containsMultipleValues":true,"name":"parameter2","values":[1,2,3]}]}',
+                body: '{"template":{"itemId":"mock-portal-item-id","portalUrl":"https://www.arcgis.com","title":"My Report"},"parameters":[{"name":"parameter1","value":"asdf"},{"containsMultipleValues":true,"name":"parameter2","values":[1,2,3]}],"format":"pdf"}',
                 headers: {
                     Authorization: "Bearer mock-reporting-token",
                     "Content-Type": "application/json",

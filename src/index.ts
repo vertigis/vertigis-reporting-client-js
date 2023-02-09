@@ -20,6 +20,15 @@ interface Parameter {
     containsMultipleValues?: boolean;
     value?: SingleParameterValue;
     values?: MultiParameterValue;
+    containsSingleValue?: boolean;
+    description?: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    item?: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    itemData?: any;
+    purpose?: string;
+    valueType?: string;
+    visible?: boolean;
 }
 
 interface PortalItemResponse {
@@ -40,6 +49,13 @@ interface TokenResponse {
 interface JobRunResponse {
     response?: {
         ticket: string;
+    };
+}
+
+interface MetadataResponse {
+    response: {
+        parameters: Parameter[];
+        controls: ControlMetadata[];
     };
 }
 
@@ -86,6 +102,10 @@ interface ControlProperties {
     width: number;
 }
 
+interface ControlMetadata extends ControlProperties {
+    units: "HundredsOfAnInch" | "TenthsOfAMillimeter";
+}
+
 /**
  * The parameters associated with a print template.
  */
@@ -93,7 +113,7 @@ export interface PrintMetadata {
     /**
      * The PrintParameters associated with a print template.
      */
-    parameters: any;
+    parameters: Parameter[];
 
     /**
      * Metadata about the controls of a print template.
@@ -266,24 +286,24 @@ async function getPortalItemInfo(
     return portalInfo;
 }
 
-export async function getItemMetadata(itemId: string, portalUrl: string, token: string): Promise<PrintMetadata> {
+export async function getItemMetadata(
+    itemId: string,
+    portalUrl: string,
+    token: string
+): Promise<PrintMetadata> {
     // Fetch the portal item
-    const portalItemInfo = await getPortalItemInfo(
-        itemId,
-        portalUrl,
-        token
-    );
+    const portalItemInfo = await getPortalItemInfo(itemId, portalUrl, token);
 
     // Infer the URL to the reporting service from the item
-    const apiServiceUrl = `${portalItemInfo.url}service`;
+    const apiServiceUrl = `${portalItemInfo.url as unknown as string}service`;
 
-    const bearerToken = await getBearerToken(apiServiceUrl, portalUrl, token)
+    const bearerToken = await getBearerToken(apiServiceUrl, portalUrl, token);
 
     const body = {
         template: {
             itemId,
             portalUrl,
-        }
+        },
     };
     const headers = {
         "Content-Type": "application/json",
@@ -300,24 +320,23 @@ export async function getItemMetadata(itemId: string, portalUrl: string, token: 
 
     try {
         // Make the metadata request
-        let response: Response;
-        response = await fetch(`${apiServiceUrl}/job/metadata`, requestOptions)
+        const response = await fetch(
+            `${apiServiceUrl}/job/metadata`,
+            requestOptions
+        );
 
         if (!response.ok) {
             createError(response.statusText, response.status);
         }
-    
+
         // Parse the response
-        const responseJson =
-            typeof (response as any).data === "string"
-                ? JSON.parse((response as any).data)
-                : await response.json();
+        const responseJson = (await response.json()) as MetadataResponse;
 
         const data = responseJson.response;
         if (!data || !data.parameters) {
             throw new Error("The print service did not provide any metadata.");
         }
-    
+
         // Create the metadata object
         const controlMetadata = marshalControlProperties(data.controls);
         const metadata = {
@@ -328,8 +347,10 @@ export async function getItemMetadata(itemId: string, portalUrl: string, token: 
         return metadata;
     } catch (error) {
         throw new Error(
-            `An error occurred. Unable to get print template metadata. ${error}`
-        )
+            `An error occurred. Unable to get print template metadata. ${
+                error as string
+            }`
+        );
     }
 }
 
@@ -338,7 +359,9 @@ export async function getItemMetadata(itemId: string, portalUrl: string, token: 
  *
  * @param controls The source of control metadata.
  */
-function marshalControlProperties (controls: any[]): ControlProperties[] {
+function marshalControlProperties(
+    controls: ControlMetadata[]
+): ControlProperties[] {
     const props: ControlProperties[] = [];
 
     if (!controls || controls.length === 0) {

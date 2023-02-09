@@ -285,11 +285,17 @@ async function getPortalItemInfo(
 
     return portalInfo;
 }
-
+/**
+ * Gets the set of parameters required for a given print template.
+ * @param itemId The portal item ID of the report item.
+ * @param portalUrl The URL of the ArcGIS Portal instance to use. Defaults to ArcGIS Online: "https://www.arcgis.com".
+ * @param token An optional ArcGIS token for accessing a secured report.
+ * If the report is secured, or accesses secured ArcGIS content the token is required.
+ */
 export async function getItemMetadata(
     itemId: string,
     portalUrl: string,
-    token: string
+    token?: string
 ): Promise<PrintMetadata> {
     // Fetch the portal item
     const portalItemInfo = await getPortalItemInfo(itemId, portalUrl, token);

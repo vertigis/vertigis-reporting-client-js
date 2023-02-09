@@ -61,6 +61,47 @@ interface WsJobStatusResponse extends JobStatusResponse {
 }
 
 /**
+ * Represents control metadata that may be of interest to a client.
+ */
+interface ControlProperties {
+    /**
+     * The type of control this metadata describes.
+     */
+    controlType: string;
+
+    /**
+     * The context of information about a control (eg MainMap.Height). Used by a
+     * client application to infer the use/purpose of the parameter.
+     */
+    purpose: string;
+
+    /**
+     * The height of the control in millimeters.
+     */
+    height: number;
+
+    /**
+     * The width of the control in millimeters.
+     */
+    width: number;
+}
+
+/**
+ * The parameters associated with a print template.
+ */
+export interface PrintMetadata {
+    /**
+     * The PrintParameters associated with a print template.
+     */
+    parameters: any;
+
+    /**
+     * Metadata about the controls of a print template.
+     */
+    controls: ControlProperties[];
+}
+
+/**
  * Parses a portal item URL string and returns the portal URL and item ID components.
  * @param url The URL of the portal item.
  * @returns An object containing the portal URL and the item ID.
@@ -132,6 +173,8 @@ export interface RunOptions {
      */
     usePolling?: boolean;
 }
+
+export const MM_PER_INCH = 25.4;
 
 /**
  * Runs a VertiGIS Studio report or print.
@@ -223,6 +266,111 @@ async function getPortalItemInfo(
     return portalInfo;
 }
 
+export async function getItemMetadata(itemId: string, portalUrl: string, token: string): Promise<PrintMetadata> {
+    // Fetch the portal item
+    const portalItemInfo = await getPortalItemInfo(
+        itemId,
+        portalUrl,
+        token
+    );
+
+    // Infer the URL to the reporting service from the item
+    const apiServiceUrl = `${portalItemInfo.url}service`;
+
+    const bearerToken = await getBearerToken(apiServiceUrl, portalUrl, token)
+
+    const body = {
+        template: {
+            itemId,
+            portalUrl,
+        }
+    };
+    const headers = {
+        "Content-Type": "application/json",
+    };
+    if (token) {
+        headers["Authorization"] = `Bearer ${bearerToken}`;
+    }
+    const requestOptions = {
+        method: "POST",
+        responseType: "json",
+        body: JSON.stringify(body),
+        headers,
+    };
+
+    try {
+        // Make the metadata request
+        let response: Response;
+        response = await fetch(`${apiServiceUrl}/job/metadata`, requestOptions)
+
+        if (!response.ok) {
+            createError(response.statusText, response.status);
+        }
+    
+        // Parse the response
+        const responseJson =
+            typeof (response as any).data === "string"
+                ? JSON.parse((response as any).data)
+                : await response.json();
+
+        const data = responseJson.response;
+        if (!data || !data.parameters) {
+            throw new Error("The print service did not provide any metadata.");
+        }
+    
+        // Create the metadata object
+        const controlMetadata = marshalControlProperties(data.controls);
+        const metadata = {
+            parameters: data.parameters,
+            controls: controlMetadata,
+        };
+
+        return metadata;
+    } catch (error) {
+        throw new Error(
+            `An error occurred. Unable to get print template metadata. ${error}`
+        )
+    }
+}
+
+/**
+ * Marshals control metadata into ControlProperties.
+ *
+ * @param controls The source of control metadata.
+ */
+function marshalControlProperties (controls: any[]): ControlProperties[] {
+    const props: ControlProperties[] = [];
+
+    if (!controls || controls.length === 0) {
+        return props;
+    }
+
+    for (const control of controls) {
+        const controlProps = {
+            controlType: control.controlType,
+            purpose: control.purpose,
+            height: convertToMillimeters(control.height, control.units),
+            width: convertToMillimeters(control.width, control.units),
+        };
+
+        props.push(controlProps);
+    }
+
+    return props;
+}
+
+function convertToMillimeters(value: number, units: string): number {
+    if (units === "HundredsOfAnInch") {
+        return (value / 100) * MM_PER_INCH;
+    }
+
+    if (units === "TenthsOfAMillimeter") {
+        return value / 10;
+    }
+
+    return value;
+}
+
 // Ensures that a portal item's info contain the "Geocortex Printing" or "Geocortex Reporting" keyword
 function isValidItemType(info: PortalItemResponse): boolean {
     return !(
@@ -234,7 +382,7 @@ function isValidItemType(info: PortalItemResponse): boolean {
 }
 
 // Gets a bearer token from the service.
-async function getBearerToken(
+export async function getBearerToken(
     serviceUrl: string,
     portalUrl: string,
     token: string | undefined

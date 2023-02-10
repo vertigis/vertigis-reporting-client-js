@@ -57,8 +57,8 @@ interface JobRunResponse {
 
 interface MetadataResponse {
     response: {
-        parameters: Parameter[];
-        controls: ControlMetadata[];
+        parameters: ParameterMetadata[];
+        controls: ControlResponse[];
     };
 }
 
@@ -82,7 +82,7 @@ interface WsJobStatusResponse extends JobStatusResponse {
 /**
  * Represents control metadata that may be of interest to a client.
  */
-interface Control {
+interface ControlMetadata {
     /**
      * The type of control this metadata describes.
      */
@@ -105,7 +105,7 @@ interface Control {
     width: number;
 }
 
-interface ControlMetadata {
+interface ControlResponse {
     /**
      * The type of control this metadata describes.
      */
@@ -142,7 +142,7 @@ export interface TemplateMetadata {
     /**
      * Metadata about the controls of a print template.
      */
-    controls: Control[];
+    controls: ControlMetadata[];
 }
 
 /**
@@ -223,9 +223,9 @@ export interface RunOptions {
     runToken?: string;
 
     /**
-     * JSON containing info about the portal item including item type and service url.
+     * The url to the template service.
      */
-    portalItemInfo?: PortalItemResponse;
+    serviceUrl?: string;
 }
 
 const MM_PER_INCH = 25.4;
@@ -248,21 +248,31 @@ export async function run(
     const portalUrl =
         options.portalUrl?.replace(/\/$/, "") || "https://www.arcgis.com";
 
-    // Fetch the portal item
-    const portalItemInfo =
-        options.portalItemInfo ??
-        (await getPortalItemInfo(itemId, portalUrl, options.token));
+    let apiServiceUrl = "";
 
-    // Ensure it is a valid item
-    if (!isValidItemType(portalItemInfo)) {
-        throw new Error(`The item '${itemId}' is not a valid template type.`);
-    }
-    if (!portalItemInfo.url) {
-        throw new Error(`The item '${itemId}' does not contain a service URL.`);
-    }
+    if (!options.serviceUrl) {
+        // Fetch the portal item info if we don't have a service url.
+        const portalItemInfo = await getPortalItemInfo(
+            itemId,
+            portalUrl,
+            options.token
+        );
 
-    // Infer the URL to the reporting service from the item
-    const apiServiceUrl = `${portalItemInfo.url}service`;
+        // Ensure it is a valid item
+        if (!isValidItemType(portalItemInfo)) {
+            throw new Error(
+                `The item '${itemId}' is not a valid template type.`
+            );
+        }
+        if (!portalItemInfo.url) {
+            throw new Error(
+                `The item '${itemId}' does not contain a service URL.`
+            );
+        }
+        apiServiceUrl = `${ensureTrailingSlash(portalItemInfo.url)}service`;
+    } else {
+        apiServiceUrl = `${ensureTrailingSlash(options.serviceUrl)}service`;
+    }
 
     // Authentication
     const bearerToken =
@@ -286,12 +296,14 @@ export async function run(
     const tag = await watchJob(apiServiceUrl, ticket, options.usePolling);
 
     // Assemble the URL to the completed report
-    const downloadUrl = `${apiServiceUrl}/job/result?ticket=${ticket}&tag=${tag}`;
+    const downloadUrl = `${ensureTrailingSlash(
+        apiServiceUrl
+    )}job/result?ticket=${ticket}&tag=${tag}`;
     return downloadUrl;
 }
 
 /** Gets the portal item info JSON
- * @param itemIdThe portal item ID of the report item.
+ * @param itemId The portal item ID of the report item.
  * @param portalUrl The URL of the ArcGIS Portal instance to use. Defaults to ArcGIS Online: "https://www.arcgis.com".
  * @param token An optional ArcGIS token for accessing a secured report.
  * If the report is secured, or accesses secured ArcGIS content the token is required.
@@ -301,9 +313,9 @@ export async function getPortalItemInfo(
     portalUrl: string,
     token?: string
 ): Promise<PortalItemResponse> {
-    const url = `${portalUrl}/sharing/content/items/${itemId}?f=json&token=${
-        token || ""
-    }`;
+    const url = `${ensureTrailingSlash(
+        portalUrl
+    )}sharing/content/items/${itemId}?f=json&token=${token || ""}`;
     const response = await fetch(url);
 
     // Check if an error response was received during the fetch
@@ -347,7 +359,7 @@ export async function getMetadata(
         "Content-Type": "application/json",
     };
     if (runToken) {
-        headers["Authorization"] = `Bearer ${runToken}`;
+        headers["Authorization"] = runToken;
     }
     const requestOptions = {
         method: "POST",
@@ -359,7 +371,7 @@ export async function getMetadata(
     try {
         // Make the metadata request
         const response = await fetch(
-            `${apiServiceUrl}/job/metadata`,
+            `${ensureTrailingSlash(apiServiceUrl)}job/metadata`,
             requestOptions
         );
 
@@ -397,8 +409,10 @@ export async function getMetadata(
  *
  * @param controls The source of control metadata.
  */
-function marshalControlProperties(controls: ControlMetadata[]): Control[] {
-    const props: Control[] = [];
+function marshalControlProperties(
+    controls: ControlResponse[]
+): ControlMetadata[] {
+    const props: ControlMetadata[] = [];
 
     if (!controls || controls.length === 0) {
         return props;
@@ -469,7 +483,10 @@ export async function getRunToken(
     let response: Response;
 
     try {
-        response = await fetch(`${serviceUrl}/auth/token/run`, options);
+        response = await fetch(
+            `${ensureTrailingSlash(serviceUrl)}auth/token/run`,
+            options
+        );
     } catch {
         throw new Error(
             "A network error occurred fetching an authorization token."
@@ -548,7 +565,10 @@ async function startJob(
     let response: Response;
 
     try {
-        response = await fetch(`${apiServiceUrl}/job/run`, requestOptions);
+        response = await fetch(
+            `${ensureTrailingSlash(apiServiceUrl)}job/run`,
+            requestOptions
+        );
     } catch {
         throw new Error("A network error occurred attempting to run a job.");
     }
@@ -597,7 +617,9 @@ async function watchJobWithSocket(
 
     return new Promise<string | undefined>((resolve) => {
         const socket = new WebSocket(
-            `${apiServiceUrl}/job/artifacts?ticket=${ticket}`
+            `${ensureTrailingSlash(
+                apiServiceUrl
+            )}job/artifacts?ticket=${ticket}`
         );
 
         socket.addEventListener("message", (message) => {
@@ -650,7 +672,9 @@ async function pollJob(apiServiceUrl: string, ticket: string): Promise<string> {
 
         try {
             response = await fetch(
-                `${apiServiceUrl}/job/artifacts?ticket=${ticket}`,
+                `${ensureTrailingSlash(
+                    apiServiceUrl
+                )}job/artifacts?ticket=${ticket}`,
                 options
             );
         } catch {
@@ -716,4 +740,11 @@ function delay(ms = 0): Promise<void> {
     return new Promise<void>((resolve) => {
         setTimeout(resolve, ms);
     });
+}
+
+function ensureTrailingSlash(url: string): string {
+    if (!url.endsWith("/")) {
+        url = url + "/";
+    }
+    return url;
 }

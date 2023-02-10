@@ -20,6 +20,9 @@ interface Parameter {
     containsMultipleValues?: boolean;
     value?: SingleParameterValue;
     values?: MultiParameterValue;
+}
+
+interface ParameterMetadata extends Parameter {
     containsSingleValue?: boolean;
     description?: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -79,7 +82,7 @@ interface WsJobStatusResponse extends JobStatusResponse {
 /**
  * Represents control metadata that may be of interest to a client.
  */
-interface ControlProperties {
+interface Control {
     /**
      * The type of control this metadata describes.
      */
@@ -102,23 +105,44 @@ interface ControlProperties {
     width: number;
 }
 
-interface ControlMetadata extends ControlProperties {
+interface ControlMetadata {
+    /**
+     * The type of control this metadata describes.
+     */
+    controlType: string;
+
+    /**
+     * The context of information about a control (eg MainMap.Height). Used by a
+     * client application to infer the use/purpose of the parameter.
+     */
+    purpose: string;
+
+    /**
+     * The height of the control in millimeters.
+     */
+    height: number;
+
+    /**
+     * The width of the control in millimeters.
+     */
+    width: number;
+
     units: "HundredsOfAnInch" | "TenthsOfAMillimeter";
 }
 
 /**
  * The parameters associated with a print template.
  */
-export interface PrintMetadata {
+export interface TemplateMetadata {
     /**
      * The PrintParameters associated with a print template.
      */
-    parameters: Parameter[];
+    parameters: ParameterMetadata[];
 
     /**
      * Metadata about the controls of a print template.
      */
-    controls: ControlProperties[];
+    controls: Control[];
 }
 
 /**
@@ -192,9 +216,19 @@ export interface RunOptions {
      * The default is false.
      */
     usePolling?: boolean;
+
+    /**
+     * A token used to authenticate with the service.
+     */
+    runToken?: string;
+
+    /**
+     * JSON containing info about the portal item including item type and service url.
+     */
+    portalItemInfo?: PortalItemResponse;
 }
 
-export const MM_PER_INCH = 25.4;
+const MM_PER_INCH = 25.4;
 
 /**
  * Runs a VertiGIS Studio report or print.
@@ -215,11 +249,9 @@ export async function run(
         options.portalUrl?.replace(/\/$/, "") || "https://www.arcgis.com";
 
     // Fetch the portal item
-    const portalItemInfo = await getPortalItemInfo(
-        itemId,
-        portalUrl,
-        options.token
-    );
+    const portalItemInfo =
+        options.portalItemInfo ??
+        (await getPortalItemInfo(itemId, portalUrl, options.token));
 
     // Ensure it is a valid item
     if (!isValidItemType(portalItemInfo)) {
@@ -233,11 +265,9 @@ export async function run(
     const apiServiceUrl = `${portalItemInfo.url}service`;
 
     // Authentication
-    const bearerToken = await getBearerToken(
-        apiServiceUrl,
-        portalUrl,
-        options.token
-    );
+    const bearerToken =
+        options.runToken ??
+        (await getRunToken(apiServiceUrl, portalUrl, options.token));
 
     // Start the reporting job
     const ticket = await startJob(
@@ -260,8 +290,13 @@ export async function run(
     return downloadUrl;
 }
 
-// Gets the portal item info JSON
-async function getPortalItemInfo(
+/** Gets the portal item info JSON
+ * @param itemIdThe portal item ID of the report item.
+ * @param portalUrl The URL of the ArcGIS Portal instance to use. Defaults to ArcGIS Online: "https://www.arcgis.com".
+ * @param token An optional ArcGIS token for accessing a secured report.
+ * If the report is secured, or accesses secured ArcGIS content the token is required.
+ */
+export async function getPortalItemInfo(
     itemId: string,
     portalUrl: string,
     token?: string
@@ -285,25 +320,22 @@ async function getPortalItemInfo(
 
     return portalInfo;
 }
+
 /**
  * Gets the set of parameters required for a given print template.
  * @param itemId The portal item ID of the report item.
  * @param portalUrl The URL of the ArcGIS Portal instance to use. Defaults to ArcGIS Online: "https://www.arcgis.com".
- * @param token An optional ArcGIS token for accessing a secured report.
- * If the report is secured, or accesses secured ArcGIS content the token is required.
+ * @param serviceUrl The url to the template service.
+ * @param runToken A token used to authenticate with the service.
  */
-export async function getItemMetadata(
+export async function getMetadata(
     itemId: string,
     portalUrl: string,
-    token?: string
-): Promise<PrintMetadata> {
-    // Fetch the portal item
-    const portalItemInfo = await getPortalItemInfo(itemId, portalUrl, token);
-
+    serviceUrl: string,
+    runToken?: string
+): Promise<TemplateMetadata> {
     // Infer the URL to the reporting service from the item
-    const apiServiceUrl = `${portalItemInfo.url as unknown as string}service`;
-
-    const bearerToken = await getBearerToken(apiServiceUrl, portalUrl, token);
+    const apiServiceUrl = `${serviceUrl}service`;
 
     const body = {
         template: {
@@ -314,8 +346,8 @@ export async function getItemMetadata(
     const headers = {
         "Content-Type": "application/json",
     };
-    if (token) {
-        headers["Authorization"] = `Bearer ${bearerToken}`;
+    if (runToken) {
+        headers["Authorization"] = `Bearer ${runToken}`;
     }
     const requestOptions = {
         method: "POST",
@@ -365,10 +397,8 @@ export async function getItemMetadata(
  *
  * @param controls The source of control metadata.
  */
-function marshalControlProperties(
-    controls: ControlMetadata[]
-): ControlProperties[] {
-    const props: ControlProperties[] = [];
+function marshalControlProperties(controls: ControlMetadata[]): Control[] {
+    const props: Control[] = [];
 
     if (!controls || controls.length === 0) {
         return props;
@@ -410,8 +440,13 @@ function isValidItemType(info: PortalItemResponse): boolean {
     );
 }
 
-// Gets a bearer token from the service.
-export async function getBearerToken(
+/** Gets a bearer token from the service.
+ * @param serviceUrl The url to the printing/reporting service.
+ * @param portalUrl The URL of the ArcGIS Portal instance to use. Defaults to ArcGIS Online: "https://www.arcgis.com".
+ * @param token An optional ArcGIS token for accessing a secured report.
+ * If the report is secured, or accesses secured ArcGIS content the token is required.
+ */
+export async function getRunToken(
     serviceUrl: string,
     portalUrl: string,
     token: string | undefined

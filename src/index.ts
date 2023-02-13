@@ -118,12 +118,12 @@ interface ControlResponse {
     purpose: string;
 
     /**
-     * The height of the control in millimeters.
+     * The height of the control.
      */
     height: number;
 
     /**
-     * The width of the control in millimeters.
+     * The width of the control.
      */
     width: number;
 
@@ -346,7 +346,6 @@ export async function getMetadata(
     serviceUrl: string,
     runToken?: string
 ): Promise<TemplateMetadata> {
-    // Infer the URL to the reporting service from the item
     const apiServiceUrl = `${serviceUrl}service`;
 
     const body = {
@@ -384,7 +383,7 @@ export async function getMetadata(
 
         const data = responseJson.response;
         if (!data || !data.parameters) {
-            throw new Error("The print service did not provide any metadata.");
+            throw new Error("The service did not provide any metadata.");
         }
 
         // Create the metadata object
@@ -397,7 +396,7 @@ export async function getMetadata(
         return metadata;
     } catch (error) {
         throw new Error(
-            `An error occurred. Unable to get print template metadata. ${
+            `An error occurred. Unable to get template metadata. ${
                 error as string
             }`
         );

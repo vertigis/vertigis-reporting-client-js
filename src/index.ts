@@ -22,6 +22,18 @@ interface Parameter {
     values?: MultiParameterValue;
 }
 
+interface ParameterMetadata extends Parameter {
+    containsSingleValue?: boolean;
+    description?: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    item?: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    itemData?: any;
+    purpose?: string;
+    valueType?: string;
+    visible?: boolean;
+}
+
 interface PortalItemResponse {
     typeKeywords?: string[];
     url?: string;
@@ -43,6 +55,13 @@ interface JobRunResponse {
     };
 }
 
+interface MetadataResponse {
+    response: {
+        parameters: ParameterMetadata[];
+        controls: ControlResponse[];
+    };
+}
+
 interface JobStatusResponse {
     results?: {
         $type: "JobResult" | "JobQuit";
@@ -58,6 +77,72 @@ interface JobStatusResponse {
 
 interface WsJobStatusResponse extends JobStatusResponse {
     final?: boolean;
+}
+
+/**
+ * Represents control metadata that may be of interest to a client.
+ */
+interface ControlMetadata {
+    /**
+     * The type of control this metadata describes.
+     */
+    controlType: string;
+
+    /**
+     * The context of information about a control (eg MainMap.Height). Used by a
+     * client application to infer the use/purpose of the parameter.
+     */
+    purpose: string;
+
+    /**
+     * The height of the control in millimeters.
+     */
+    height: number;
+
+    /**
+     * The width of the control in millimeters.
+     */
+    width: number;
+}
+
+interface ControlResponse {
+    /**
+     * The type of control this metadata describes.
+     */
+    controlType: string;
+
+    /**
+     * The context of information about a control (eg MainMap.Height). Used by a
+     * client application to infer the use/purpose of the parameter.
+     */
+    purpose: string;
+
+    /**
+     * The height of the control.
+     */
+    height: number;
+
+    /**
+     * The width of the control.
+     */
+    width: number;
+
+    units: "HundredsOfAnInch" | "TenthsOfAMillimeter";
+}
+
+/**
+ * The parameters associated with a print template.
+ */
+export interface TemplateMetadata {
+    /**
+     * The PrintParameters associated with a print template.
+     */
+    parameters: ParameterMetadata[];
+
+    /**
+     * Metadata about the controls of a print template.
+     */
+    controls: ControlMetadata[];
 }
 
 /**
@@ -131,7 +216,19 @@ export interface RunOptions {
      * The default is false.
      */
     usePolling?: boolean;
+
+    /**
+     * A token used to authenticate with the service.
+     */
+    runToken?: string;
+
+    /**
+     * The url to the template service.
+     */
+    serviceUrl?: string;
 }
+
+const MM_PER_INCH = 25.4;
 
 /**
  * Runs a VertiGIS Studio report or print.
@@ -151,30 +248,36 @@ export async function run(
     const portalUrl =
         options.portalUrl?.replace(/\/$/, "") || "https://www.arcgis.com";
 
-    // Fetch the portal item
-    const portalItemInfo = await getPortalItemInfo(
-        itemId,
-        portalUrl,
-        options.token
-    );
+    let apiServiceUrl = "";
 
-    // Ensure it is a valid item
-    if (!isValidItemType(portalItemInfo)) {
-        throw new Error(`The item '${itemId}' is not a valid template type.`);
-    }
-    if (!portalItemInfo.url) {
-        throw new Error(`The item '${itemId}' does not contain a service URL.`);
-    }
+    if (!options.serviceUrl) {
+        // Fetch the portal item info if we don't have a service url.
+        const portalItemInfo = await getPortalItemInfo(
+            itemId,
+            portalUrl,
+            options.token
+        );
 
-    // Infer the URL to the reporting service from the item
-    const apiServiceUrl = `${portalItemInfo.url}service`;
+        // Ensure it is a valid item
+        if (!isValidItemType(portalItemInfo)) {
+            throw new Error(
+                `The item '${itemId}' is not a valid template type.`
+            );
+        }
+        if (!portalItemInfo.url) {
+            throw new Error(
+                `The item '${itemId}' does not contain a service URL.`
+            );
+        }
+        apiServiceUrl = `${ensureTrailingSlash(portalItemInfo.url)}service`;
+    } else {
+        apiServiceUrl = `${ensureTrailingSlash(options.serviceUrl)}service`;
+    }
 
     // Authentication
-    const bearerToken = await getBearerToken(
-        apiServiceUrl,
-        portalUrl,
-        options.token
-    );
+    const bearerToken =
+        options.runToken ??
+        (await getRunToken(apiServiceUrl, portalUrl, options.token));
 
     // Start the reporting job
     const ticket = await startJob(
@@ -193,19 +296,26 @@ export async function run(
     const tag = await watchJob(apiServiceUrl, ticket, options.usePolling);
 
     // Assemble the URL to the completed report
-    const downloadUrl = `${apiServiceUrl}/job/result?ticket=${ticket}&tag=${tag}`;
+    const downloadUrl = `${ensureTrailingSlash(
+        apiServiceUrl
+    )}job/result?ticket=${ticket}&tag=${tag}`;
     return downloadUrl;
 }
 
-// Gets the portal item info JSON
-async function getPortalItemInfo(
+/** Gets the portal item info JSON
+ * @param itemId The portal item ID of the report item.
+ * @param portalUrl The URL of the ArcGIS Portal instance to use. Defaults to ArcGIS Online: "https://www.arcgis.com".
+ * @param token An optional ArcGIS token for accessing a secured report.
+ * If the report is secured, or accesses secured ArcGIS content the token is required.
+ */
+export async function getPortalItemInfo(
     itemId: string,
     portalUrl: string,
     token?: string
 ): Promise<PortalItemResponse> {
-    const url = `${portalUrl}/sharing/content/items/${itemId}?f=json&token=${
-        token || ""
-    }`;
+    const url = `${ensureTrailingSlash(
+        portalUrl
+    )}sharing/content/items/${itemId}?f=json&token=${token || ""}`;
     const response = await fetch(url);
 
     // Check if an error response was received during the fetch
@@ -223,6 +333,116 @@ async function getPortalItemInfo(
     return portalInfo;
 }
 
+/**
+ * Gets the set of parameters required for a given print template.
+ * @param itemId The portal item ID of the report item.
+ * @param portalUrl The URL of the ArcGIS Portal instance to use. Defaults to ArcGIS Online: "https://www.arcgis.com".
+ * @param serviceUrl The url to the template service.
+ * @param runToken A token used to authenticate with the service.
+ */
+export async function getMetadata(
+    itemId: string,
+    portalUrl: string,
+    serviceUrl: string,
+    runToken?: string
+): Promise<TemplateMetadata> {
+    const apiServiceUrl = `${serviceUrl}service`;
+
+    const body = {
+        template: {
+            itemId,
+            portalUrl,
+        },
+    };
+    const headers = {
+        "Content-Type": "application/json",
+    };
+    if (runToken) {
+        headers["Authorization"] = runToken;
+    }
+    const requestOptions = {
+        method: "POST",
+        responseType: "json",
+        body: JSON.stringify(body),
+        headers,
+    };
+
+    try {
+        // Make the metadata request
+        const response = await fetch(
+            `${ensureTrailingSlash(apiServiceUrl)}job/metadata`,
+            requestOptions
+        );
+
+        if (!response.ok) {
+            createError(response.statusText, response.status);
+        }
+
+        // Parse the response
+        const responseJson = (await response.json()) as MetadataResponse;
+
+        const data = responseJson.response;
+        if (!data || !data.parameters) {
+            throw new Error("The service did not provide any metadata.");
+        }
+
+        // Create the metadata object
+        const controlMetadata = marshalControlProperties(data.controls);
+        const metadata = {
+            parameters: data.parameters,
+            controls: controlMetadata,
+        };
+
+        return metadata;
+    } catch (error) {
+        throw new Error(
+            `An error occurred. Unable to get template metadata. ${
+                error as string
+            }`
+        );
+    }
+}
+
+/**
+ * Marshals control metadata into ControlProperties.
+ *
+ * @param controls The source of control metadata.
+ */
+function marshalControlProperties(
+    controls: ControlResponse[]
+): ControlMetadata[] {
+    const props: ControlMetadata[] = [];
+
+    if (!controls || controls.length === 0) {
+        return props;
+    }
+
+    for (const control of controls) {
+        const controlProps = {
+            controlType: control.controlType,
+            purpose: control.purpose,
+            height: convertToMillimeters(control.height, control.units),
+            width: convertToMillimeters(control.width, control.units),
+        };
+
+        props.push(controlProps);
+    }
+
+    return props;
+}
+
+function convertToMillimeters(value: number, units: string): number {
+    if (units === "HundredsOfAnInch") {
+        return (value / 100) * MM_PER_INCH;
+    }
+
+    if (units === "TenthsOfAMillimeter") {
+        return value / 10;
+    }
+
+    return value;
+}
+
 // Ensures that a portal item's info contain the "Geocortex Printing" or "Geocortex Reporting" keyword
 function isValidItemType(info: PortalItemResponse): boolean {
     return !(
@@ -233,8 +453,13 @@ function isValidItemType(info: PortalItemResponse): boolean {
     );
 }
 
-// Gets a bearer token from the service.
-async function getBearerToken(
+/** Gets a bearer token from the service.
+ * @param serviceUrl The url to the printing/reporting service.
+ * @param portalUrl The URL of the ArcGIS Portal instance to use. Defaults to ArcGIS Online: "https://www.arcgis.com".
+ * @param token An optional ArcGIS token for accessing a secured report.
+ * If the report is secured, or accesses secured ArcGIS content the token is required.
+ */
+export async function getRunToken(
     serviceUrl: string,
     portalUrl: string,
     token: string | undefined
@@ -257,7 +482,10 @@ async function getBearerToken(
     let response: Response;
 
     try {
-        response = await fetch(`${serviceUrl}/auth/token/run`, options);
+        response = await fetch(
+            `${ensureTrailingSlash(serviceUrl)}auth/token/run`,
+            options
+        );
     } catch {
         throw new Error(
             "A network error occurred fetching an authorization token."
@@ -336,7 +564,10 @@ async function startJob(
     let response: Response;
 
     try {
-        response = await fetch(`${apiServiceUrl}/job/run`, requestOptions);
+        response = await fetch(
+            `${ensureTrailingSlash(apiServiceUrl)}job/run`,
+            requestOptions
+        );
     } catch {
         throw new Error("A network error occurred attempting to run a job.");
     }
@@ -385,7 +616,9 @@ async function watchJobWithSocket(
 
     return new Promise<string | undefined>((resolve) => {
         const socket = new WebSocket(
-            `${apiServiceUrl}/job/artifacts?ticket=${ticket}`
+            `${ensureTrailingSlash(
+                apiServiceUrl
+            )}job/artifacts?ticket=${ticket}`
         );
 
         socket.addEventListener("message", (message) => {
@@ -438,7 +671,9 @@ async function pollJob(apiServiceUrl: string, ticket: string): Promise<string> {
 
         try {
             response = await fetch(
-                `${apiServiceUrl}/job/artifacts?ticket=${ticket}`,
+                `${ensureTrailingSlash(
+                    apiServiceUrl
+                )}job/artifacts?ticket=${ticket}`,
                 options
             );
         } catch {
@@ -504,4 +739,11 @@ function delay(ms = 0): Promise<void> {
     return new Promise<void>((resolve) => {
         setTimeout(resolve, ms);
     });
+}
+
+function ensureTrailingSlash(url: string): string {
+    if (!url.endsWith("/")) {
+        url = url + "/";
+    }
+    return url;
 }

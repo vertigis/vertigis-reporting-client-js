@@ -1,3 +1,5 @@
+const DefaultPortalUrl = "https://www.arcgis.com";
+
 type SingleParameterValue = string | number | boolean;
 type MultiParameterValue = string[] | number[] | boolean[];
 
@@ -223,7 +225,7 @@ export interface RunOptions {
     runToken?: string;
 
     /**
-     * The url to the template service.
+     * The url to the printing/reporting service. For example, "https://apps.vertigisstudio.com/reporting".
      */
     serviceUrl?: string;
 }
@@ -245,8 +247,7 @@ export async function run(
     }
 
     // Ensure the portal URL doesn't end with a trailing slash
-    const portalUrl =
-        options.portalUrl?.replace(/\/$/, "") || "https://www.arcgis.com";
+    const portalUrl = options.portalUrl?.replace(/\/$/, "") || DefaultPortalUrl;
 
     let apiServiceUrl = "";
 
@@ -269,9 +270,9 @@ export async function run(
                 `The item '${itemId}' does not contain a service URL.`
             );
         }
-        apiServiceUrl = `${ensureTrailingSlash(portalItemInfo.url)}service`;
+        apiServiceUrl = `${ensureTrailingSlash(portalItemInfo.url)}`;
     } else {
-        apiServiceUrl = `${ensureTrailingSlash(options.serviceUrl)}service`;
+        apiServiceUrl = `${ensureTrailingSlash(options.serviceUrl)}`;
     }
 
     // Authentication
@@ -298,7 +299,7 @@ export async function run(
     // Assemble the URL to the completed report
     const downloadUrl = `${ensureTrailingSlash(
         apiServiceUrl
-    )}job/result?ticket=${ticket}&tag=${tag}`;
+    )}service/job/result?ticket=${ticket}&tag=${tag}`;
     return downloadUrl;
 }
 
@@ -346,8 +347,6 @@ export async function getMetadata(
     serviceUrl: string,
     runToken?: string
 ): Promise<TemplateMetadata> {
-    const apiServiceUrl = `${serviceUrl}service`;
-
     const body = {
         template: {
             itemId,
@@ -358,7 +357,7 @@ export async function getMetadata(
         "Content-Type": "application/json",
     };
     if (runToken) {
-        headers["Authorization"] = runToken;
+        headers["Authorization"] = `Bearer ${runToken}`;
     }
     const requestOptions = {
         method: "POST",
@@ -370,7 +369,7 @@ export async function getMetadata(
     try {
         // Make the metadata request
         const response = await fetch(
-            `${ensureTrailingSlash(apiServiceUrl)}job/metadata`,
+            `${ensureTrailingSlash(serviceUrl)}service/job/metadata`,
             requestOptions
         );
 
@@ -453,7 +452,8 @@ function isValidItemType(info: PortalItemResponse): boolean {
     );
 }
 
-/** Gets a bearer token from the service.
+/**
+ * Gets a token from the printing/reporting service.
  * @param serviceUrl The url to the printing/reporting service.
  * @param portalUrl The URL of the ArcGIS Portal instance to use. Defaults to ArcGIS Online: "https://www.arcgis.com".
  * @param token An optional ArcGIS token for accessing a secured report.
@@ -470,7 +470,7 @@ export async function getRunToken(
 
     const body = {
         accessToken: token,
-        portalUrl,
+        portalUrl: portalUrl || DefaultPortalUrl,
     };
 
     const options = {
@@ -483,7 +483,7 @@ export async function getRunToken(
 
     try {
         response = await fetch(
-            `${ensureTrailingSlash(serviceUrl)}auth/token/run`,
+            `${ensureTrailingSlash(serviceUrl)}service/auth/token/run`,
             options
         );
     } catch {
@@ -497,16 +497,15 @@ export async function getRunToken(
     }
 
     const responseJson = (await response.json()) as TokenResponse;
-    const bearerToken = responseJson?.response?.token || "";
 
-    return `Bearer ${bearerToken}`;
+    return responseJson?.response?.token || "";
 }
 
 async function startJob(
     portalUrl: string,
     itemId: string,
     apiServiceUrl: string,
-    bearerToken: string,
+    runToken: string,
     parameters?: Record<
         string,
         SingleParameterValue | MultiParameterValue | MapValue
@@ -539,7 +538,7 @@ async function startJob(
 
     const body = {
         template: {
-            itemId: itemId,
+            itemId,
             portalUrl,
             title,
         },
@@ -557,18 +556,18 @@ async function startJob(
         },
     };
 
-    if (bearerToken) {
-        requestOptions.headers["Authorization"] = bearerToken;
+    if (runToken) {
+        requestOptions.headers["Authorization"] = `Bearer ${runToken}`;
     }
 
     let response: Response;
 
     try {
         response = await fetch(
-            `${ensureTrailingSlash(apiServiceUrl)}job/run`,
+            `${ensureTrailingSlash(apiServiceUrl)}service/job/run`,
             requestOptions
         );
-    } catch {
+    } catch (e) {
         throw new Error("A network error occurred attempting to run a job.");
     }
 
@@ -618,7 +617,7 @@ async function watchJobWithSocket(
         const socket = new WebSocket(
             `${ensureTrailingSlash(
                 apiServiceUrl
-            )}job/artifacts?ticket=${ticket}`
+            )}service/job/artifacts?ticket=${ticket}`
         );
 
         socket.addEventListener("message", (message) => {
@@ -673,7 +672,7 @@ async function pollJob(apiServiceUrl: string, ticket: string): Promise<string> {
             response = await fetch(
                 `${ensureTrailingSlash(
                     apiServiceUrl
-                )}job/artifacts?ticket=${ticket}`,
+                )}service/job/artifacts?ticket=${ticket}`,
                 options
             );
         } catch {

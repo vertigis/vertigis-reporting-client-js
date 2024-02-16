@@ -9,16 +9,16 @@ describe("parseItemUrl", () => {
     test("valid URLs", () => {
         expect(
             parseItemUrl(
-                "https://www.arcgis.com/home/item.html?id=25c278bd96aa49949f8a89564c6347ce"
-            )
+                "https://www.arcgis.com/home/item.html?id=25c278bd96aa49949f8a89564c6347ce",
+            ),
         ).toEqual({
             itemId: "25c278bd96aa49949f8a89564c6347ce",
             portalUrl: "https://www.arcgis.com",
         });
         expect(
             parseItemUrl(
-                "https://server/portal/home/item.html?id=25c278bd96aa49949f8a89564c6347ce"
-            )
+                "https://server/portal/home/item.html?id=25c278bd96aa49949f8a89564c6347ce",
+            ),
         ).toEqual({
             itemId: "25c278bd96aa49949f8a89564c6347ce",
             portalUrl: "https://server/portal",
@@ -27,17 +27,17 @@ describe("parseItemUrl", () => {
     test("invalid URLs", () => {
         expect(() => parseItemUrl("")).toThrow();
         expect(() =>
-            parseItemUrl("https://www.arcgis.com/home/item.html?id=")
+            parseItemUrl("https://www.arcgis.com/home/item.html?id="),
         ).toThrow();
         expect(() =>
             parseItemUrl(
-                "www.arcgis.com/home/item.html?id=25c278bd96aa49949f8a89564c6347ce"
-            )
+                "www.arcgis.com/home/item.html?id=25c278bd96aa49949f8a89564c6347ce",
+            ),
         ).toThrow();
         expect(() =>
             parseItemUrl(
-                "https://www.arcgis.com/item.html?id=25c278bd96aa49949f8a89564c6347ce"
-            )
+                "https://www.arcgis.com/item.html?id=25c278bd96aa49949f8a89564c6347ce",
+            ),
         ).toThrow();
     });
 });
@@ -98,25 +98,27 @@ describe("run", () => {
 
         function mockResponseOnce(
             response: Record<string, unknown>,
-            callback?: (input: RequestInfo, init: RequestInit) => void
+            callback?: (input: RequestInfo, init: RequestInit) => void,
         ) {
-            mockFetch.mockImplementationOnce((input: RequestInfo, init: RequestInit) => {
-                callback?.(input, init);
-                return Promise.resolve({
-                    ok: true,
-                    json: () => Promise.resolve(response),
-                    status: 200,
-                    statusText: "OK",
-                });
-            });
+            mockFetch.mockImplementationOnce(
+                (input: RequestInfo, init: RequestInit) => {
+                    callback?.(input, init);
+                    return Promise.resolve({
+                        ok: true,
+                        json: () => Promise.resolve(response),
+                        status: 200,
+                        statusText: "OK",
+                    });
+                },
+            );
         }
 
         mockResponseOnce(MOCK_PORTAL_ITEM_RESPONSE);
         mockResponseOnce(MOCK_REPORTING_TOKEN_RESPONSE);
         mockResponseOnce(MOCK_REPORTING_JOB_RUN_RESPONSE, (input, init) =>
             expect(init.headers?.["Authorization"]).toBe(
-                `Bearer ${MOCK_REPORTING_TOKEN}`
-            )
+                `Bearer ${MOCK_REPORTING_TOKEN}`,
+            ),
         );
         mockResponseOnce(MOCK_REPORTING_JOB_ARTIFACTS_RESPONSE_PENDING);
         mockResponseOnce(MOCK_REPORTING_JOB_ARTIFACTS_RESPONSE_DONE);
@@ -132,9 +134,9 @@ describe("run", () => {
                 token: MOCK_PORTAL_TOKEN,
                 usePolling: true,
                 format: "pdf",
-            })
+            }),
         ).toBe(
-            `${DEFAULT_REPORTING_URL}/service/job/result?ticket=${MOCK_REPORT_TICKET}&tag=${MOCK_REPORT_TAG}`
+            `${DEFAULT_REPORTING_URL}/service/job/result?ticket=${MOCK_REPORT_TICKET}&tag=${MOCK_REPORT_TAG}`,
         );
         expect(global.fetch).toHaveBeenNthCalledWith(
             3,
@@ -147,7 +149,7 @@ describe("run", () => {
                 },
                 method: "POST",
                 responseType: "json",
-            })
+            }),
         );
     });
     test("itemId option is required", async () => {

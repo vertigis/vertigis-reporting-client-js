@@ -240,7 +240,7 @@ const MM_PER_INCH = 25.4;
  */
 export async function run(
     itemId: string,
-    options: RunOptions = {}
+    options: RunOptions = {},
 ): Promise<string> {
     if (!itemId) {
         throw new Error("itemId is required.");
@@ -256,18 +256,18 @@ export async function run(
         const portalItemInfo = await getPortalItemInfo(
             itemId,
             portalUrl,
-            options.token
+            options.token,
         );
 
         // Ensure it is a valid item
         if (!isValidItemType(portalItemInfo)) {
             throw new Error(
-                `The item '${itemId}' is not a valid template type.`
+                `The item '${itemId}' is not a valid template type.`,
             );
         }
         if (!portalItemInfo.url) {
             throw new Error(
-                `The item '${itemId}' does not contain a service URL.`
+                `The item '${itemId}' does not contain a service URL.`,
             );
         }
         apiServiceUrl = `${ensureTrailingSlash(portalItemInfo.url)}`;
@@ -290,7 +290,7 @@ export async function run(
         options.culture,
         options.dpi,
         options.resultFileName,
-        options.format
+        options.format,
     );
 
     // Watch or poll the job
@@ -298,7 +298,7 @@ export async function run(
 
     // Assemble the URL to the completed report
     const downloadUrl = `${ensureTrailingSlash(
-        apiServiceUrl
+        apiServiceUrl,
     )}service/job/result?ticket=${ticket}&tag=${tag}`;
     return downloadUrl;
 }
@@ -312,10 +312,10 @@ export async function run(
 export async function getPortalItemInfo(
     itemId: string,
     portalUrl: string,
-    token?: string
+    token?: string,
 ): Promise<PortalItemResponse> {
     const url = `${ensureTrailingSlash(
-        portalUrl
+        portalUrl,
     )}sharing/content/items/${itemId}?f=json&token=${token || ""}`;
     const response = await fetch(url);
 
@@ -345,7 +345,7 @@ export async function getMetadata(
     itemId: string,
     portalUrl: string,
     serviceUrl: string,
-    runToken?: string
+    runToken?: string,
 ): Promise<TemplateMetadata> {
     const body = {
         template: {
@@ -370,7 +370,7 @@ export async function getMetadata(
         // Make the metadata request
         const response = await fetch(
             `${ensureTrailingSlash(serviceUrl)}service/job/metadata`,
-            requestOptions
+            requestOptions,
         );
 
         if (!response.ok) {
@@ -397,7 +397,7 @@ export async function getMetadata(
         throw new Error(
             `An error occurred. Unable to get template metadata. ${
                 error as string
-            }`
+            }`,
         );
     }
 }
@@ -408,7 +408,7 @@ export async function getMetadata(
  * @param controls The source of control metadata.
  */
 function marshalControlProperties(
-    controls: ControlResponse[]
+    controls: ControlResponse[],
 ): ControlMetadata[] {
     const props: ControlMetadata[] = [];
 
@@ -447,7 +447,7 @@ function isValidItemType(info: PortalItemResponse): boolean {
     return !(
         !info.typeKeywords ||
         !Array.from(info.typeKeywords).some(
-            (x) => x === "Geocortex Printing" || x === "Geocortex Reporting"
+            (x) => x === "Geocortex Printing" || x === "Geocortex Reporting",
         )
     );
 }
@@ -462,7 +462,7 @@ function isValidItemType(info: PortalItemResponse): boolean {
 export async function getRunToken(
     serviceUrl: string,
     portalUrl: string,
-    token: string | undefined
+    token: string | undefined,
 ): Promise<string> {
     if (!token) {
         return "";
@@ -484,11 +484,11 @@ export async function getRunToken(
     try {
         response = await fetch(
             `${ensureTrailingSlash(serviceUrl)}service/auth/token/run`,
-            options
+            options,
         );
     } catch {
         throw new Error(
-            "A network error occurred fetching an authorization token."
+            "A network error occurred fetching an authorization token.",
         );
     }
 
@@ -513,7 +513,7 @@ async function startJob(
     culture?: string,
     dpi?: number,
     title?: string,
-    format?: string
+    format?: string,
 ): Promise<string> {
     const params: (Parameter | MapParameter)[] = [];
     if (parameters) {
@@ -565,7 +565,7 @@ async function startJob(
     try {
         response = await fetch(
             `${ensureTrailingSlash(apiServiceUrl)}service/job/run`,
-            requestOptions
+            requestOptions,
         );
     } catch (e) {
         throw new Error("A network error occurred attempting to run a job.");
@@ -588,7 +588,7 @@ async function startJob(
 async function watchJob(
     apiServiceUrl: string,
     ticket: string,
-    usePolling = false
+    usePolling = false,
 ): Promise<string> {
     let tag: string | undefined;
 
@@ -609,15 +609,15 @@ async function watchJob(
 
 async function watchJobWithSocket(
     apiServiceUrl: string,
-    ticket: string
+    ticket: string,
 ): Promise<string | undefined> {
     apiServiceUrl = apiServiceUrl.replace(/^http/, "ws");
 
     return new Promise<string | undefined>((resolve) => {
         const socket = new WebSocket(
             `${ensureTrailingSlash(
-                apiServiceUrl
-            )}service/job/artifacts?ticket=${ticket}`
+                apiServiceUrl,
+            )}service/job/artifacts?ticket=${ticket}`,
         );
 
         socket.addEventListener("message", (message) => {
@@ -671,13 +671,13 @@ async function pollJob(apiServiceUrl: string, ticket: string): Promise<string> {
         try {
             response = await fetch(
                 `${ensureTrailingSlash(
-                    apiServiceUrl
+                    apiServiceUrl,
                 )}service/job/artifacts?ticket=${ticket}`,
-                options
+                options,
             );
         } catch {
             throw new Error(
-                "A network error occurred checking the job status."
+                "A network error occurred checking the job status.",
             );
         }
 
@@ -693,7 +693,7 @@ async function pollJob(apiServiceUrl: string, ticket: string): Promise<string> {
 }
 
 function checkJobStatusResponse(
-    response: JobStatusResponse
+    response: JobStatusResponse,
 ): string | undefined {
     const results = response.results;
     const error = response.error;
@@ -703,7 +703,7 @@ function checkJobStatusResponse(
         throw createError(error.message, error.status);
     } else if (results) {
         const result = results.find(
-            (result) => result["$type"] === "JobResult"
+            (result) => result["$type"] === "JobResult",
         );
 
         if (result) {
@@ -714,7 +714,8 @@ function checkJobStatusResponse(
 
         if (quit) {
             const error = results.find(
-                (result) => result["$type"] && result["$type"].endsWith("error")
+                (result) =>
+                    result["$type"] && result["$type"].endsWith("error"),
             );
             const message = error?.message || genericErrorMessage;
             throw createError(message, error?.code);
